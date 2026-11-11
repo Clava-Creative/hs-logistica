@@ -3,3 +3,10 @@ dist
 dist-server
 data
 .lighthouse
+.next
+.env
+media
+*.tsbuildinfo
+next-env.d.ts
+AGENTS.md
+CLAUDE.md

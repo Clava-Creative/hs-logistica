@@ -1,0 +1,87 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
+import sharp from 'sharp'
+import { buildConfig, type Plugin } from 'payload'
+import { postgresAdapter } from '@payloadcms/db-postgres'
+import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { seoPlugin } from '@payloadcms/plugin-seo'
+import { redirectsPlugin } from '@payloadcms/plugin-redirects'
+import { s3Storage } from '@payloadcms/storage-s3'
+import { nodemailerAdapter } from '@payloadcms/email-nodemailer'
+import { pt } from '@payloadcms/translations/languages/pt'
+
+import { Users } from './collections/Users'
+import { Media } from './collections/Media'
+import { Posts } from './collections/Posts'
+import { Categories } from './collections/Categories'
+import { Quotes } from './collections/Quotes'
+import { Home } from './globals/Home'
+import { SiteSettings } from './globals/SiteSettings'
+import { anyone, loggedIn } from './lib/access'
+import { env } from './lib/env'
+import { revalidateAlways, revalidateDelete } from './hooks/revalidate'
+import { ensureAdmin } from './seed/ensureAdmin'
+
+const dirname = path.dirname(fileURLToPath(import.meta.url))
+const e = process.env
+
+const plugins: Plugin[] = [
+  seoPlugin({
+    collections: ['posts'], globals: ['home'], uploadsCollection: 'media', tabbedUI: false,
+    generateTitle: ({ doc }) => `${(doc as { title?: string }).title || 'HS Logística e Armazenagem'} | HS Logística`,
+    generateDescription: ({ doc }) => (doc as { excerpt?: string }).excerpt || '',
+  }),
+  redirectsPlugin({
+    collections: ['posts'],
+    overrides: {
+      labels: { singular: 'Redirecionamento', plural: 'Redirecionamentos' },
+      admin: { group: 'Configurações', description: 'Links antigos que devem levar a um endereço novo.' },
+      access: { read: anyone, create: loggedIn, update: loggedIn, delete: loggedIn },
+      hooks: { afterChange: [revalidateAlways], afterDelete: [revalidateDelete] },
+    },
+  }),
+]
+// Mídia: bucket compatível com S3 (R2, Railway) quando configurado; sem ele, pasta local `media/` (desenvolvimento)
+if (e.S3_BUCKET) {
+  plugins.push(s3Storage({
+    collections: { media: e.S3_PUBLIC_URL ? { generateFileURL: ({ filename, prefix }) => [e.S3_PUBLIC_URL!.replace(/\/$/, ''), prefix, filename].filter(Boolean).join('/') } : true },
+    bucket: e.S3_BUCKET,
+    config: {
+      endpoint: e.S3_ENDPOINT || undefined, region: e.S3_REGION || 'auto', forcePathStyle: true,
+      credentials: { accessKeyId: e.S3_ACCESS_KEY_ID || '', secretAccessKey: e.S3_SECRET_ACCESS_KEY || '' },
+    },
+  }))
+}
+
+export default buildConfig({
+  serverURL: env.cmsUrl,
+  secret: e.PAYLOAD_SECRET || '',
+  cors: [env.siteUrl],
+  csrf: [env.siteUrl, env.cmsUrl],
+  admin: {
+    user: Users.slug,
+    importMap: { baseDir: path.resolve(dirname) },
+    meta: { titleSuffix: ' · HS Logística', icons: [{ rel: 'icon', type: 'image/png', url: '/logo.png' }] },
+    components: { graphics: { Logo: '/components/Brand#Logo', Icon: '/components/Brand#Icon' } },
+    livePreview: {
+      breakpoints: [{ label: 'Celular', name: 'mobile', width: 390, height: 844 }, { label: 'Computador', name: 'desktop', width: 1440, height: 900 }],
+    },
+  },
+  i18n: { supportedLanguages: { pt }, fallbackLanguage: 'pt' },
+  collections: [Posts, Categories, Quotes, Media, Users],
+  globals: [Home, SiteSettings],
+  editor: lexicalEditor(),
+  upload: { limits: { fileSize: 8 * 1024 * 1024 }, abortOnLimit: true },
+  // sem SMTP configurado, o Payload só registra os e-mails no log
+  email: e.SMTP_HOST ? nodemailerAdapter({
+    defaultFromAddress: e.SMTP_FROM || 'site@hslogistica.invalid', defaultFromName: 'Site HS Logística',
+    transportOptions: { host: e.SMTP_HOST, port: Number(e.SMTP_PORT || 587), secure: Number(e.SMTP_PORT) === 465, auth: { user: e.SMTP_USER || '', pass: e.SMTP_PASS || '' } },
+  }) : undefined,
+  // fila que publica os posts agendados; roda a cada minuto dentro do próprio serviço do CMS
+  jobs: { autoRun: [{ cron: '* * * * *', queue: 'default', limit: 20 }], shouldAutoRun: () => true },
+  typescript: { outputFile: path.resolve(dirname, '../../../packages/types/payload-types.ts') },
+  db: postgresAdapter({ pool: { connectionString: e.DATABASE_URI || e.DATABASE_URL || '' } }),
+  sharp,
+  plugins,
+  onInit: ensureAdmin,
+})
