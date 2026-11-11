@@ -11,11 +11,11 @@ body.admin .add{display:inline-flex;margin-top:24px;font:500 14px/1 var(--body);
 .bar button,.tool{font:500 13px/1 var(--body);color:#fff;background:#1c2230;border:1px solid #3a4253;border-radius:var(--r);padding:10px 13px;cursor:pointer}
 .bar button:hover,.tool:hover{border-color:var(--accent)}
 .bar .badge{background:var(--accent);color:#0b0f18;border-radius:10px;padding:1px 7px;margin-left:6px;font-weight:700}
-.scrim{position:fixed;inset:0;background:color-mix(in srgb,var(--ink) 70%,transparent);z-index:50;display:grid;place-items:center;padding:16px}
-.modal{background:var(--paper);color:var(--ink);width:min(430px,100%);padding:36px;border-radius:var(--r-lg);display:grid;gap:18px;box-shadow:0 40px 80px -30px rgba(0,0,0,.6)}
+.scrim{position:fixed;inset:0;background:color-mix(in srgb,var(--deep) 78%,transparent);z-index:50;display:grid;place-items:center;padding:16px}
+.modal{width:min(430px,100%);padding:36px;border-radius:var(--r-lg);display:grid;gap:18px;box-shadow:0 40px 80px -30px rgba(0,0,0,.6)}
 .modal h2{font-size:28px}
 .modal p,.drawer p{font-size:14.5px;color:var(--muted)}
-.drawer{position:fixed;inset:0 0 0 auto;width:min(460px,100%);background:var(--paper);color:var(--ink);z-index:45;box-shadow:-30px 0 60px -20px rgba(0,0,0,.35);padding:30px 28px 110px;overflow:auto;display:grid;gap:18px;align-content:start}
+.drawer{position:fixed;inset:0 0 0 auto;width:min(460px,100%);z-index:45;box-shadow:-30px 0 60px -20px rgba(0,0,0,.35);padding:30px 28px 110px;overflow:auto;display:grid;gap:18px;align-content:start}
 .drawer h2{font-size:26px}
 .drawer .closex{position:absolute;top:18px;right:18px;background:none;border:0;font-size:26px;cursor:pointer;color:var(--ink)}
 .swatches{display:grid;grid-template-columns:1fr 1fr;gap:14px}

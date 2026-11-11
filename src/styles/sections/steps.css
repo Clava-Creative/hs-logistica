@@ -1,4 +1,9 @@
-.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:40px 32px;counter-reset:s;list-style:none;padding:0;margin:0}
-.step{counter-increment:s;display:grid;gap:10px;position:relative;align-content:start}
-.step::before{content:counter(s);font:900 64px/1 var(--display);font-stretch:108%;color:var(--accent-deep);letter-spacing:-.03em}
-.step p{color:var(--muted)}
+/* Etapas: quatro cartões em coluna; o número grande usa o Archivo condensado */
+.steps{display:grid;gap:10px;counter-reset:s;list-style:none;padding:0;margin:0;max-width:var(--col)}
+.step{counter-increment:s;display:grid;grid-template-columns:64px minmax(0,1fr);gap:2px 18px;align-items:start;position:relative;padding:16px 18px;border:1px solid var(--line);border-radius:var(--r-lg);transition:border-color .3s,background .3s,color .3s}
+.step::before{content:counter(s);grid-row:1/3;font:900 62px/.9 var(--display);font-stretch:75%;color:var(--muted);letter-spacing:-.02em;transition:color .3s}
+.step p{color:var(--muted);font-size:16px}
+.is-pinned .step{color:var(--muted)}
+.is-pinned .step.is-active,.step:not(.is-pinned *){color:var(--fg)}
+.step.is-active{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent)}
+.step.is-active::before,.steps:not(.is-pinned *) .step::before{color:var(--accent)}

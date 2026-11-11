@@ -15,7 +15,7 @@ export function lookDrawer(): void {
     <div class="swatches">
       <label for="t-accent">Verde de destaque<input id="t-accent" type="color" data-theme="accent" value="${esc(t.accent)}"></label>
       <label for="t-ink">Azul da marca<input id="t-ink" type="color" data-theme="ink" value="${esc(t.ink)}"></label>
-      <label for="t-paper">Fundo<input id="t-paper" type="color" data-theme="paper" value="${esc(t.paper)}"></label>
+      <label for="t-paper">Cor clara (textos e formulário)<input id="t-paper" type="color" data-theme="paper" value="${esc(t.paper)}"></label>
     </div>
     <button class="btn btn-line btn-sm" data-act="resetTheme">Voltar às cores da marca</button>`);
 }

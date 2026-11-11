@@ -7,7 +7,7 @@ const DEMO = 'hs2013';   // só vale sem servidor, quando tudo fica neste navega
 
 export function loginModal(err = ''): void {
   closeUI();
-  ui().insertAdjacentHTML('beforeend', `<div class="scrim"><form class="modal" id="login">
+  ui().insertAdjacentHTML('beforeend', `<div class="scrim"><form class="modal surface" id="login">
     <h2>Portal do cliente</h2>
     <p>Entre para alterar textos, fotos, serviços, contatos e cores do site e ver os pedidos de cotação.</p>
     <label for="l-pass">Senha<input id="l-pass" name="password" type="password" required autocomplete="current-password">${err ? `<span class="err">${esc(err)}</span>` : ''}</label>

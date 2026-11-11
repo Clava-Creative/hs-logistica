@@ -1,3 +1,3 @@
-footer{background:var(--ink);color:var(--on-ink-muted);font-size:14px;border-top:1px solid color-mix(in srgb,var(--on-ink) 18%,transparent)}
+footer{position:relative;background:var(--deep);color:var(--muted);font-size:14px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 32px;justify-content:space-between;align-items:center;padding-block:20px}
 footer .portal-link{color:inherit;font-size:14px}

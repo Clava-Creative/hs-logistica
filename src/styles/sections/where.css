@@ -1,13 +1,26 @@
-.where{background:var(--tint)}
-.km{position:relative;height:74px;margin:8px 0 64px}
-.km::before{content:"";position:absolute;inset:36px 0 auto;height:3px;background:var(--ink)}
-.km span{position:absolute;top:0;transform:translateX(-50%);font:500 12.5px/1 var(--mono);white-space:nowrap;color:var(--muted)}
-.km span::after{content:"";position:absolute;left:50%;top:30px;width:2px;height:15px;background:var(--ink)}
-.km span:first-child{transform:none}.km span:first-child::after{left:0}
-.km span.end{transform:translateX(-100%);color:var(--ink)}
-.km span.end::after{left:auto;right:0;background:var(--accent);width:17px;height:17px;top:29px;border-radius:50%;box-shadow:0 0 0 4px var(--tint)}
+/* Localização: a régua da BR-277 vira a barra de progresso do voo pela rodovia */
+.where .head{margin-bottom:28px}
+.routes{display:grid;gap:18px;max-width:var(--col)}
+.route{display:grid;gap:4px;position:relative;align-content:start}
+.route h3{font-size:18px}
+.route p{color:var(--muted);font-size:16px}
+.km{position:relative;height:92px;margin-top:48px}
+.km::before,.km-fill{content:"";position:absolute;inset:36px 0 auto;height:3px;background:var(--line)}
+.km-fill{background:var(--accent);transform-origin:0 50%;transform:scaleX(0)}
+.km span{position:absolute;top:0;transform:translateX(-50%);font:500 12.5px/1 var(--mono);white-space:nowrap;color:var(--muted);transition:color .3s}
+.km span::after{content:"";position:absolute;left:50%;top:30px;width:2px;height:15px;background:currentColor}
+.km span:first-of-type{transform:none}.km span:first-of-type::after{left:0}
+.km span.end{transform:translateX(-100%)}
+.km span.end::after{left:auto;right:0;width:15px;height:15px;top:30px;border-radius:50%}
+.km span.passed{color:var(--fg)}
+.km span.end.passed{color:var(--accent)}
 .km i{position:absolute;top:56px;font:400 12px/1 var(--mono);font-style:normal;color:var(--muted)}
+.km-count{position:absolute;top:50px;left:50%;transform:translateX(-50%);font:500 30px/1 var(--mono);font-variant-numeric:tabular-nums;color:var(--fg);letter-spacing:-.02em}
+.km-count small{font-size:13px;color:var(--muted);margin-right:8px}
 @media(max-width:700px){.km span.mid{display:none}}
-.routes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:40px 56px}
-.route{display:grid;gap:10px;position:relative;align-content:start}
-.route p{color:var(--muted)}
+/* Presa na tela: título em cima, régua embaixo e o meio livre para a rodovia */
+.where.is-pinned{display:grid}
+.where.is-pinned>.wrap{display:grid;grid-template-rows:auto auto 1fr auto;width:100%}
+.where.is-pinned .km{grid-row:4;margin-top:0}
+.where.is-pinned::before{background:linear-gradient(180deg,color-mix(in srgb,var(--ink) 40%,transparent),transparent 30%,transparent 62%,color-mix(in srgb,var(--ink) 88%,transparent)),var(--scrim-side)}
+@media(max-width:940px){.where.is-pinned::before{background:linear-gradient(180deg,var(--ink) 0%,color-mix(in srgb,var(--ink) 92%,transparent) 56%,transparent 68%,transparent 78%,var(--ink) 90%)}}

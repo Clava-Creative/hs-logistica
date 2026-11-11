@@ -1,10 +1,11 @@
+/* Página escura sobre a cena 3D. O azul-marinho da marca é o chão de tudo; o verde marca ação, rota e destaque;
+   a cor clara serve aos textos e às superfícies de formulário (.surface). */
 :root{
   --ink:#0E234E; --accent:#67AA4B; --paper:#FFFFFF;
-  --accent-deep:color-mix(in srgb,var(--accent) 70%,var(--ink));
-  --tint:color-mix(in srgb,var(--ink) 4%,var(--paper));
-  --muted:color-mix(in srgb,var(--ink) 68%,var(--paper));
-  --line:color-mix(in srgb,var(--ink) 14%,var(--paper));
-  --on-ink:#F2F5FA; --on-ink-muted:color-mix(in srgb,var(--ink) 35%,#fff);
+  --fg:color-mix(in srgb,var(--paper) 94%,var(--ink));
+  --muted:color-mix(in srgb,var(--paper) 66%,var(--ink));
+  --line:color-mix(in srgb,var(--paper) 20%,transparent);
+  --deep:color-mix(in srgb,var(--ink) 78%,#000);
   --ok:#1E7A4F; --bad:#B3261E;
   --display:"Archivo Variable","Helvetica Neue",Arial,sans-serif;
   --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -12,4 +13,10 @@
   --r:6px; --r-lg:16px;
   --ease:cubic-bezier(.16,1,.3,1);
   --gut:max(24px,env(safe-area-inset-left));
+  --col:600px;                                    /* coluna de leitura à esquerda; a cena fica à direita */
+  --scrim-side:linear-gradient(90deg,var(--ink) 0%,color-mix(in srgb,var(--ink) 92%,transparent) 36%,color-mix(in srgb,var(--ink) 50%,transparent) 58%,transparent 80%);
+  --scrim-full:color-mix(in srgb,var(--ink) 84%,transparent);
 }
+@media(max-width:940px){:root{--scrim-side:color-mix(in srgb,var(--ink) 86%,transparent)}}
+/* Superfície clara (formulário, janelas do portal): os mesmos nomes de cor, com valores para fundo claro */
+.surface{--fg:var(--ink);--muted:color-mix(in srgb,var(--ink) 68%,var(--paper));--line:color-mix(in srgb,var(--ink) 14%,var(--paper));background:var(--paper);color:var(--ink)}

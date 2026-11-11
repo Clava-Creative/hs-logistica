@@ -6,7 +6,7 @@ export function closeUI(): void { ui().querySelector('.scrim,.drawer')?.remove()
 
 export function drawer(html: string): void {
   closeUI();
-  ui().insertAdjacentHTML('beforeend', `<aside class="drawer" aria-label="Portal"><button class="closex" data-act="close" aria-label="Fechar">×</button>${html}</aside>`);
+  ui().insertAdjacentHTML('beforeend', `<aside class="drawer surface" aria-label="Portal"><button class="closex" data-act="close" aria-label="Fechar">×</button>${html}</aside>`);
   ui().querySelector<HTMLElement>('.drawer button, .drawer input')?.focus();
 }
 

@@ -1,20 +1,29 @@
-/* Barra do topo fixa, progresso de leitura e indicador lateral de seções */
+/* Barra do topo fixa, progresso de leitura, indicador lateral de seções e camadas da cena */
 html.lenis,html.lenis body{height:auto}
 .lenis.lenis-smooth{scroll-behavior:auto!important}
 .lenis.lenis-stopped{overflow:hidden}
-.nav-bar{position:fixed;inset:0 0 auto;z-index:30;background:color-mix(in srgb,var(--paper) 90%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .45s var(--ease)}
+.nav-bar{position:fixed;inset:0 0 auto;z-index:30;background:color-mix(in srgb,var(--ink) 82%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:transform .45s var(--ease)}
 .nav-bar.is-hidden{transform:translateY(-100%)}
 .nav-bar:focus-within{transform:none}
-main{padding-top:80px}
-.nav nav a[aria-current]{background-size:100% 1.5px}
+main{padding-top:78px}
+.nav nav a[aria-current]{background-size:100% 1.5px;color:var(--accent)}
 .progress{position:fixed;inset:0 0 auto;height:3px;z-index:31;pointer-events:none}
 .progress i{display:block;height:100%;background:var(--accent);transform-origin:0 50%;transform:scaleX(0)}
 .dots{position:fixed;right:max(18px,env(safe-area-inset-right));top:50%;transform:translateY(-50%);z-index:29;display:none;flex-direction:column;gap:2px}
 @media(min-width:1180px){.dots{display:flex}}
 .dots button{display:flex;align-items:center;justify-content:flex-end;gap:10px;height:26px;padding:0;border:0;background:none;cursor:pointer;color:var(--muted);font:500 12.5px/1 var(--body)}
-.dots button span{opacity:0;transform:translateX(6px);transition:opacity .25s,transform .35s var(--ease);background:var(--paper);padding:4px 8px;border-radius:var(--r)}
+.dots button span{opacity:0;transform:translateX(6px);transition:opacity .25s,transform .35s var(--ease);background:var(--deep);padding:4px 8px;border-radius:var(--r)}
 .dots button::after{content:"";width:8px;height:8px;border-radius:50%;border:1.5px solid currentColor;transition:transform .35s var(--ease),background .2s,border-color .2s}
 .dots button:hover span,.dots button:focus-visible span{opacity:1;transform:none}
-.dots button[aria-current]{color:var(--ink)}
+.dots button[aria-current]{color:var(--fg)}
 .dots button[aria-current]::after{background:var(--accent);border-color:var(--accent);transform:scale(1.5)}
 body.admin .dots,body.admin .progress{display:none}
+/* Cena 3D: um único canvas fixo atrás do conteúdo, e os rótulos de cidade em HTML por cima dele */
+.scene{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity .9s var(--ease)}
+.scene.is-ready{opacity:1}
+.scene.is-fading{opacity:0;transition-duration:.25s}
+body.admin .scene{opacity:.22}
+.labels{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.labels span{position:absolute;left:0;top:0;font:500 12px/1 var(--mono);color:var(--fg);white-space:nowrap;padding:5px 8px;border-radius:var(--r);background:color-mix(in srgb,var(--ink) 70%,transparent);opacity:0;transition:opacity .35s;will-change:transform}
+.labels span.on{opacity:1}
+body.admin .labels{display:none}

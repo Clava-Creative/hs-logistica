@@ -44,7 +44,9 @@ export function buildProgress(): void {
   SECTIONS.forEach((s) => {
     const el = document.getElementById(s.id);
     if (!el) return;
-    ScrollTrigger.create({ trigger: el, start: 'top 55%', end: 'bottom 55%', onToggle: (self) => { if (self.isActive) setActive(s.id); } });
+    // seção presa: quem ocupa o espaço na página é o invólucro criado pelo pin
+    const box = el.parentElement?.classList.contains('pin-spacer') ? el.parentElement : el;
+    ScrollTrigger.create({ trigger: box, start: 'top 55%', end: 'bottom 55%', onToggle: (self) => { if (self.isActive) setActive(s.id); } });
   });
   setActive('inicio');
 }

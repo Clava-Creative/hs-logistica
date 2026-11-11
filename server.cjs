@@ -35,7 +35,7 @@ const str = (v, max) => String(v ?? '').slice(0, max).trim();
 // ---------- Página: o HTML sai com o conteúdo salvo já escrito e o mesmo conteúdo embutido para o JS ----------
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml' };
 const SECURITY = { 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' };
-let renderPage = null, page = null;       // page: HTML pronto, refeito quando o conteúdo muda
+let renderPage = null, page = null, pageBuild = 0;   // page: HTML pronto, refeito quando o conteúdo ou o build mudam
 const inline = v => JSON.stringify(v).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, c => '\\u' + c.charCodeAt(0).toString(16));
 function buildPage() {
   const template = fs.readFileSync(path.join(DIST, 'template.html'), 'utf8');
@@ -61,7 +61,8 @@ async function handle(req, res) {
   const url = req.url.split('?')[0], ip = req.socket.remoteAddress;
   try {
     if (url === '/' || url === '/index.html') {
-      page = page || buildPage();
+      const built = fs.statSync(path.join(DIST, 'template.html')).mtimeMs;
+      if (!page || built !== pageBuild) { page = buildPage(); pageBuild = built; }
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY });
       return res.end(req.method === 'HEAD' ? undefined : page);
     }

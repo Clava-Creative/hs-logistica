@@ -1,4 +1,5 @@
 import { T, img, tools, ARROW, type Ctx } from './html';
+import { poster } from './poster';
 
 export const hero = ({ c }: Ctx): string => {
   const photo = img(c.hero.photo);
@@ -13,7 +14,7 @@ export const hero = ({ c }: Ctx): string => {
   <div class="panel">
     ${photo
       ? `<img class="cover" src="${photo}" alt="Operação da HS Logística em Foz do Iguaçu">`
-      : `<canvas id="map" role="img" aria-label="Mapa da Tríplice Fronteira: a HS na BR-277, entre Ciudad del Este, Foz do Iguaçu e Puerto Iguazú"></canvas>`}
+      : poster(c)}
     ${tools('hero.photo', photo)}
   </div>
 </div>`;

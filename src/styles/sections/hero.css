@@ -1,34 +1,38 @@
-.hero{display:grid;grid-template-columns:minmax(var(--gut),1fr) minmax(0,640px) minmax(0,552px) minmax(var(--gut),1fr);align-items:stretch;padding-block:28px 0}
-.hero-text{grid-column:2;padding:64px 56px 88px 0;display:grid;align-content:center;gap:28px}
-.hero h1{font-size:clamp(31px,5.3vw,78px);overflow-wrap:anywhere;line-height:.98;font-weight:900;font-stretch:108%;letter-spacing:-.035em}
-.hero h1 .hl{color:var(--accent-deep);display:block}
+/* Abertura: texto na coluna da esquerda; à direita, a janela por onde aparece a cena (ou o pôster, antes dela) */
+.hero{position:relative;z-index:0;display:grid;grid-template-columns:minmax(var(--gut),1fr) minmax(0,640px) minmax(0,552px) minmax(var(--gut),1fr);align-items:stretch;min-height:calc(100svh - 78px)}
+.hero::before{content:"";position:absolute;inset:0;z-index:-1;background:var(--scrim-side);pointer-events:none}
+.hero-text{grid-column:2;padding:48px 24px 72px 0;display:grid;align-content:center;gap:28px}
+.hero h1{font-size:clamp(31px,4.5vw,66px);line-height:.98;font-weight:900;font-stretch:108%;letter-spacing:-.035em}
+.hero h1>span{display:block}
+.hero h1 .hl{color:var(--accent)}
 .hero .sub{font-size:20px;color:var(--muted);max-width:46ch}
 .cta{display:flex;flex-wrap:wrap;gap:14px}
 .fact{font-size:15px;display:flex;flex-wrap:wrap;gap:8px 22px;padding-top:20px;border-top:1px solid var(--line)}
 .fact b{font-weight:600}
-.panel{grid-column:3/5;background:var(--ink);border-radius:var(--r-lg) 0 0 var(--r-lg);position:relative;overflow:hidden;min-height:600px}
-.panel canvas{position:absolute;inset:0;width:100%;height:100%}
-.panel img.cover{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.panel{grid-column:3/5;position:relative;overflow:hidden;min-height:520px}
+.panel canvas,.panel .poster,.panel img.cover{position:absolute;inset:0;width:100%;height:100%}
+.panel img.cover{object-fit:cover;border-radius:var(--r-lg) 0 0 var(--r-lg)}
+.poster{transition:opacity .9s var(--ease)}
+.poster text{font-family:var(--body)}
+.has-3d .panel .poster,.has-3d .panel #map{opacity:0}
 @media(max-width:940px){
-  .hero{grid-template-columns:var(--gut) minmax(0,1fr) var(--gut)}
-  .hero-text{padding:40px 0 48px}
-  .panel{grid-column:1/-1;border-radius:0;min-height:0;aspect-ratio:1/1;max-height:560px;width:100%}
+  .hero{grid-template-columns:var(--gut) minmax(0,1fr) var(--gut);min-height:0}
+  .hero-text{padding:36px 0 44px}
+  .panel{grid-column:1/-1;min-height:0;aspect-ratio:1/1;max-height:520px;width:100%}
+  .panel img.cover{border-radius:0}
+  .has-3d .panel:not(:has(.cover)){display:none}
+  .has-3d .hero{min-height:calc(100svh - 70px)}
 }
 /* Entrada da abertura, uma vez só e em CSS: começa com o HTML, sem esperar o JavaScript. */
 @media(prefers-reduced-motion:no-preference){
   body:not(.entered) .hero h1>span{animation:line 1s var(--ease) backwards}
   body:not(.entered) .hero h1>span+span{animation-delay:.12s}
-  body:not(.entered) .hero .sub,body:not(.entered) .hero .cta{animation:rise .9s var(--ease) .22s backwards}
-  body:not(.entered) .hero .cta{animation-delay:.3s}
-  body:not(.entered) .fact>b{animation:rise .8s var(--ease) backwards}
+  body:not(.entered) .hero .sub{animation:rise .9s var(--ease) .22s backwards}
+  body:not(.entered) .hero .cta{animation:rise .9s var(--ease) .3s backwards}
+  body:not(.entered) .fact>b{animation:rise .8s var(--ease) .66s backwards}
   body:not(.entered) .fact>b:nth-child(1){animation-delay:.42s}
   body:not(.entered) .fact>b:nth-child(2){animation-delay:.5s}
   body:not(.entered) .fact>b:nth-child(3){animation-delay:.58s}
-  body:not(.entered) .fact>b:nth-child(n+4){animation-delay:.66s}
-  body:not(.entered) .panel{animation:open 1.1s var(--ease) backwards}
 }
-.hero h1>span{display:block}
 @keyframes line{from{clip-path:inset(0 0 100% 0);transform:translateY(.35em)}to{clip-path:inset(-.1em 0 -.2em 0);transform:none}}
-@keyframes open{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0)}}
 @keyframes rise{from{transform:translateY(22px);opacity:0}to{transform:none;opacity:1}}
-@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}

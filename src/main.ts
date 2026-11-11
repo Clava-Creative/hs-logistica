@@ -22,13 +22,14 @@ import { S, load } from './content/store';
 import { render, onRender } from './app';
 import { initForms } from './forms';
 import { startMap } from './sections/map2d';
+import { detect } from './three/quality';
+import { reducedMotion } from './ui';
 import { initScroll } from './scroll/timelines';
 
 const admin = () => import('./admin/portal');
 
 async function boot(): Promise<void> {
   await load();
-  onRender(startMap);
   initForms();
   initScroll();
   // O portal é um pedaço separado: só baixa quando alguém clica em "Portal" ou já tem sessão aberta.
@@ -44,4 +45,31 @@ async function boot(): Promise<void> {
   setTimeout(() => document.body.classList.add('entered'), 1600);
   if (location.hash === '#portal' && !S.admin) void admin().then((m) => m.openPortal());
 }
-void boot();
+
+/** Sem WebGL: o pôster fica e o mapa 2D animado entra por cima dele, na mesma janela da abertura. */
+function fallback2D(): void {
+  const mountMap = (): void => {
+    const panel = document.querySelector('.panel');
+    if (!panel || panel.querySelector('.cover')) return;
+    if (!document.getElementById('map')) panel.insertAdjacentHTML('beforeend', '<canvas id="map" aria-hidden="true"></canvas>');
+    startMap();
+  };
+  onRender(mountMap); mountMap();
+}
+
+/** A cena 3D entra depois do primeiro paint e só se o aparelho der conta. */
+function schedule3D(): void {
+  const q = detect();
+  if (!q.webgl) { if (!reducedMotion()) fallback2D(); return; }
+  if (!q.allow) return;                               // economia de dados: fica só o pôster
+  const go = (): void => { void import('./three').then((m) => m.mount(q)).catch(fallback2D); };
+  if (q.tier === 'baixo') {
+    // aparelho modesto: a cena só é baixada quando o visitante começa a usar a página
+    const evs = ['pointerdown', 'touchstart', 'keydown', 'wheel', 'scroll'] as const;
+    const once = (): void => { evs.forEach((e) => removeEventListener(e, once)); go(); };
+    evs.forEach((e) => addEventListener(e, once, { passive: true }));
+  } else if ('requestIdleCallback' in window) requestIdleCallback(go, { timeout: 2500 });
+  else setTimeout(go, 1200);
+}
+
+void boot().then(schedule3D);

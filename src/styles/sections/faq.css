@@ -1,7 +1,13 @@
-.faq{max-width:840px;border-top:2px solid var(--ink)}
+.faq{max-width:var(--col);border-top:2px solid var(--fg)}
 .qa{border-bottom:1px solid var(--line);position:relative}
-.qa summary{list-style:none;cursor:pointer;padding:24px 56px 24px 0;position:relative}
+.qa summary{list-style:none;cursor:pointer;padding:22px 52px 22px 0;position:relative}
 .qa summary::-webkit-details-marker{display:none}
-.qa summary::after{content:"";position:absolute;right:12px;top:50%;width:12px;height:12px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateY(-70%) rotate(45deg);transition:transform .3s var(--ease)}
+.qa summary::after{content:"";position:absolute;right:12px;top:50%;width:11px;height:11px;border-right:2px solid var(--accent);border-bottom:2px solid var(--accent);transform:translateY(-70%) rotate(45deg);transition:transform .3s var(--ease)}
 .qa[open] summary::after{transform:translateY(-30%) rotate(225deg)}
-.qa p{color:var(--muted);padding:0 56px 26px 0;max-width:68ch}
+.qa p{color:var(--muted);padding:0 52px 24px 0;max-width:60ch}
+/* Altura animada pelo próprio navegador; onde não há suporte, abre e fecha de uma vez */
+@supports (interpolate-size:allow-keywords){
+  .faq{interpolate-size:allow-keywords}
+  .qa::details-content{block-size:0;overflow:clip;transition:block-size .45s var(--ease),content-visibility .45s allow-discrete}
+  .qa[open]::details-content{block-size:auto}
+}

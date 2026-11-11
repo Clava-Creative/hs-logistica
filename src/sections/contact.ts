@@ -4,7 +4,7 @@ export const contact = ({ c, admin }: Ctx): string => {
   const show = (v: string): boolean => admin || !!v;
   const row = (label: string, inner: string): string => `<div class="rowi"><span class="k">${label}</span>${inner}</div>`;
   return `
-<section class="close" id="contato"><div class="wrap cgrid">
+<section class="close veil-full" id="contato"><div class="wrap cgrid">
   <div>
     <div class="head">${T('contact.title', 'h2')}${T('contact.sub', 'p', 'lead')}</div>
     <div class="info">
@@ -15,7 +15,7 @@ export const contact = ({ c, admin }: Ctx): string => {
       ${show(c.contact.hours) ? row('Horário', T('contact.hours', 'span', '', 'Adicionar horário')) : ''}
     </div>
   </div>
-  <form class="quote" id="quote" novalidate>
+  <form class="quote surface" id="quote" novalidate>
     <label for="q-name">Nome ou empresa<input id="q-name" name="name" maxlength="120" autocomplete="organization"><span class="err" id="e-name"></span></label>
     <label for="q-contact">Telefone ou e-mail<input id="q-contact" name="contact" maxlength="120"><span class="err" id="e-contact"></span></label>
     <label for="q-service">Serviço<select id="q-service" name="service">${c.services.items.map((s) => `<option>${esc(s.t)}</option>`).join('')}<option>Outro</option></select></label>
