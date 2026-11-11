@@ -43,7 +43,7 @@ export function blogPost(c: Content, p: Post, related: PostCard[], siteUrl: stri
       ${p.categories.map((k) => `<a href="/blog/categoria/${esc(k.slug)}">${esc(k.title)}</a>`).join('')}
     </p>
   </header>
-  ${p.cover ? `<div class="post-cover wrap">${picture(p.cover, '(max-width: 1240px) 100vw, 1192px', '', false)}</div>` : ''}
+  ${p.cover ? `<div class="post-cover wrap">${picture(p.cover, '(max-width: 823px) 100vw, 775px', '', false)}</div>` : ''}
   <div class="prose">${p.html}</div>
   <footer class="post-foot">
     <div class="share"><span>Compartilhar</span>

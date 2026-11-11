@@ -21,6 +21,7 @@ import { anyone, loggedIn } from './lib/access'
 import { env } from './lib/env'
 import { revalidateAlways, revalidateDelete } from './hooks/revalidate'
 import { ensureAdmin } from './seed/ensureAdmin'
+import { migrations } from './migrations'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
 const e = process.env
@@ -71,6 +72,7 @@ export default buildConfig({
   collections: [Posts, Categories, Quotes, Media, Users],
   globals: [Home, SiteSettings],
   editor: lexicalEditor(),
+  graphQL: { disable: true },                 // o site usa só a API REST
   upload: { limits: { fileSize: 8 * 1024 * 1024 }, abortOnLimit: true },
   // sem SMTP configurado, o Payload só registra os e-mails no log
   email: e.SMTP_HOST ? nodemailerAdapter({
@@ -81,7 +83,8 @@ export default buildConfig({
   jobs: { autoRun: [{ cron: '* * * * *', queue: 'default', limit: 20 }], shouldAutoRun: () => true },
   // os tipos gerados são compartilhados com o site; a declaração para o Payload fica em src/payload.d.ts
   typescript: { outputFile: path.resolve(dirname, '../../../packages/types/payload-types.ts'), declare: false },
-  db: postgresAdapter({ pool: { connectionString: e.DATABASE_URI || e.DATABASE_URL || '' } }),
+  // em produção as migrações de src/migrations rodam sozinhas na partida; em desenvolvimento o esquema acompanha o código
+  db: postgresAdapter({ pool: { connectionString: e.DATABASE_URI || e.DATABASE_URL || '' }, prodMigrations: migrations }),
   sharp,
   plugins,
   onInit: ensureAdmin,

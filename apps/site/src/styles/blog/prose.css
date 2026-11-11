@@ -1,5 +1,5 @@
 /* Texto do post: coluna de cerca de 68 caracteres, corpo maior e entrelinha folgada */
-.prose{max-width:calc(68ch + 2*var(--gut));margin-inline:auto;padding-inline:var(--gut);font-size:19px;line-height:1.72;overflow-wrap:break-word}
+.prose{max-width:calc(var(--read) + 2*var(--gut));margin-inline:auto;padding-inline:var(--gut);font-size:19px;line-height:1.72;overflow-wrap:break-word}
 .prose>*{margin-block:0}
 .prose>*+*{margin-top:1.15em}
 .prose :is(h2,h3,h4){font-family:var(--display);line-height:1.15;letter-spacing:-.015em;max-width:none;text-wrap:balance}
