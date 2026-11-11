@@ -1,4 +1,4 @@
-import { T, LOCK, type Ctx } from './html';
+import { esc, safeUrl, type Ctx } from './html'
 
-export const footer = (_: Ctx): string =>
-  `<footer><div class="wrap">${T('footer')}<button class="portal-link" data-act="portal">${LOCK}Portal do cliente</button></div></footer>`;
+export const footer = ({ c }: Ctx): string =>
+  `<footer><div class="wrap"><span>${esc(c.footer)}</span>${safeUrl(c.cmsUrl) ? `<a class="admin-link" href="${esc(c.cmsUrl)}/admin" rel="nofollow noopener">Área do cliente</a>` : ''}</div></footer>`

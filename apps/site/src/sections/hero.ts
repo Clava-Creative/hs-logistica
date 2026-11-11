@@ -1,21 +1,15 @@
-import { T, img, tools, ARROW, type Ctx } from './html';
-import { poster } from './poster';
+import { esc, picture, ARROW, type Ctx } from './html'
+import { poster } from './poster'
 
-export const hero = ({ c }: Ctx): string => {
-  const photo = img(c.hero.photo);
-  return `
+export const hero = ({ c }: Ctx): string => `
 <div class="hero" id="inicio">
   <div class="hero-text">
-    <h1>${T('hero.title')} ${T('hero.title2', 'span', 'hl')}</h1>
-    ${T('hero.sub', 'p', 'sub')}
-    <div class="cta"><a class="btn btn-primary" href="#contato">${T('hero.cta1')}${ARROW}</a><a class="btn btn-line" href="#servicos">${T('hero.cta2')}</a></div>
-    <div class="fact">${c.hero.facts.map((_, i) => `<b>${T(`hero.facts.${i}`)}</b>`).join('')}</div>
+    <h1><span>${esc(c.hero.title)}</span> <span class="hl">${esc(c.hero.title2)}</span></h1>
+    <p class="sub">${esc(c.hero.sub)}</p>
+    <div class="cta"><a class="btn btn-primary" href="#contato"><span>${esc(c.hero.cta1)}</span>${ARROW}</a><a class="btn btn-line" href="#servicos"><span>${esc(c.hero.cta2)}</span></a></div>
+    <div class="fact">${c.hero.facts.map((f) => `<b>${esc(f)}</b>`).join('')}</div>
   </div>
   <div class="panel">
-    ${photo
-      ? `<img class="cover" src="${photo}" alt="Operação da HS Logística em Foz do Iguaçu">`
-      : poster(c)}
-    ${tools('hero.photo', photo)}
+    ${c.hero.photo ? picture(c.hero.photo, '(max-width: 940px) 100vw, 46vw', 'cover', false) : poster(c)}
   </div>
-</div>`;
-};
+</div>`

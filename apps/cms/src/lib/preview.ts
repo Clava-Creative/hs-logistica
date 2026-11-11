@@ -12,6 +12,6 @@ export function previewToken(now = Date.now()): string {
 
 export function previewUrl(kind: 'home' | 'post', slug = ''): string {
   const q = new URLSearchParams({ kind, token: previewToken() })
-  if (slug) q.set('slug', slug)
+  if (slug) q.set('id', slug)
   return `${env.siteUrl}/preview?${q.toString()}`
 }

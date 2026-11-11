@@ -1,128 +1,185 @@
-// Servidor do site HS Logística: entrega o build (dist/) e guarda o que o cliente altera no portal.
-// Sem dependências. Uso: npm run build && ADMIN_PASSWORD="sua-senha" node server.cjs
+// Servidor do site HS Logística. Entrega o build (dist/), monta as páginas com o conteúdo do CMS (Payload)
+// e guarda o HTML em memória até o CMS avisar que algo mudou. Sem dependências.
+//   npm run build && CMS_URL=... SITE_URL=... REVALIDATE_SECRET=... PREVIEW_SECRET=... QUOTE_PROXY_SECRET=... node server.cjs
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), zlib = require('zlib');
+const { loadSite, fill, get } = require('./lib/pages.cjs');
 
+const clean = (v) => String(v || '').replace(/\/$/, '');
 const PORT = process.env.PORT || 3000;
-const DIST = path.join(__dirname, 'dist');
-const DATA = path.join(__dirname, 'data');
-fs.mkdirSync(DATA, { recursive: true });
-const file = n => path.join(DATA, n);
-const read = (n, d) => { try { return JSON.parse(fs.readFileSync(file(n), 'utf8')); } catch { return d; } };
-const write = (n, v) => { fs.writeFileSync(file(n) + '.tmp', JSON.stringify(v, null, 1)); fs.renameSync(file(n) + '.tmp', file(n)); };
+const CMS = clean(process.env.CMS_URL), BASE = clean(process.env.SITE_URL);
+const SECRETS = { revalidate: process.env.REVALIDATE_SECRET || '', preview: process.env.PREVIEW_SECRET || '', quote: process.env.QUOTE_PROXY_SECRET || '' };
+const DIST = path.join(__dirname, 'dist'), DATA = path.join(__dirname, 'data'), SNAPSHOT = path.join(DATA, 'site.json');
 
-const hash = (pw, salt = crypto.randomBytes(16).toString('hex')) => ({ salt, hash: crypto.scryptSync(pw, salt, 64).toString('hex') });
-const check = (pw, a) => crypto.timingSafeEqual(Buffer.from(hash(pw, a.salt).hash, 'hex'), Buffer.from(a.hash, 'hex'));
-
-// Senha: na primeira execução usa ADMIN_PASSWORD ou gera uma e mostra no terminal.
-let auth = read('auth.json', null);
-if (!auth) {
-  const pw = process.env.ADMIN_PASSWORD || crypto.randomBytes(9).toString('base64url');
-  auth = hash(pw); write('auth.json', auth);
-  if (!process.env.ADMIN_PASSWORD) console.log('\n  Senha inicial do portal: ' + pw + '\n  (troque no portal, em "Senha")\n');
-}
-
-const sessions = new Map();            // token -> validade
-const attempts = new Map();            // ip -> {n, until}
-const TTL = 12 * 3600e3;
-const authed = req => { const t = (req.headers.authorization || '').replace(/^Bearer /, ''); const e = sessions.get(t); if (e && e > Date.now()) return true; sessions.delete(t); return false; };
-const throttled = ip => { const a = attempts.get(ip); return a && a.n >= 8 && a.until > Date.now(); };
-const fail = ip => { const a = attempts.get(ip); attempts.set(ip, a && a.until > Date.now() ? { n: a.n + 1, until: a.until } : { n: 1, until: Date.now() + 15 * 60e3 }); };
-
-const send = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); };
-const body = req => new Promise((ok, no) => { let s = ''; req.on('data', c => { s += c; if (s.length > 8e6) { no(new Error('grande demais')); req.destroy(); } }); req.on('end', () => { try { ok(JSON.parse(s || '{}')); } catch { no(new Error('JSON inválido')); } }); });
+const safeEqual = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length > 0 && x.length === y.length && crypto.timingSafeEqual(x, y); };
+const json = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(body)); };
+const readBody = (req, max = 2e6) => new Promise((ok, no) => { let s = ''; req.on('data', (c) => { s += c; if (s.length > max) { no(new Error('grande demais')); req.destroy(); } }); req.on('end', () => { try { ok(JSON.parse(s || '{}')); } catch { no(new Error('JSON inválido')); } }); });
 const str = (v, max) => String(v ?? '').slice(0, max).trim();
+/** IP de quem pediu. Atrás do proxy da hospedagem (Railway), é o primeiro endereço de X-Forwarded-For. */
+const ipOf = (req) => (process.env.TRUST_PROXY === '0' ? '' : String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()) || req.socket.remoteAddress || '';
 
-// ---------- Página: o HTML sai com o conteúdo salvo já escrito e o mesmo conteúdo embutido para o JS ----------
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml' };
-const SECURITY = { 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' };
-let renderPage = null, page = null, pageBuild = 0, pageId = '';   // page: HTML pronto, refeito quando o conteúdo ou o build mudam
-const inline = v => JSON.stringify(v).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, c => '\\u' + c.charCodeAt(0).toString(16));
-function buildPage() {
-  const template = fs.readFileSync(path.join(DIST, 'template.html'), 'utf8');
-  const saved = read('content.json', null);
-  const { html, head } = renderPage(saved, process.env.SITE_URL || '');
-  return template.replace('<!--app-->', () => html).replace('<!--head-->', () => head)
-    .replace('<!--state-->', () => `<script>window.__HS__=${inline({ content: saved })}</script>`);
+// ---------- Conteúdo: lido do CMS na partida e a cada aviso de mudança; a última leitura boa fica em disco ----------
+let ssr = null, site = null, templates = null, loadedFromCms = false;
+const pages = new Map();          // endereço → HTML pronto
+async function refresh() {
+  site = await loadSite(ssr, CMS);
+  loadedFromCms = true; pages.clear(); packed.clear();
+  try { fs.mkdirSync(DATA, { recursive: true }); fs.writeFileSync(SNAPSHOT + '.tmp', JSON.stringify(site)); fs.renameSync(SNAPSHOT + '.tmp', SNAPSHOT); } catch { /* sem disco gravável: segue só em memória */ }
 }
-// Texto sai comprimido (brotli ou gzip, o que o navegador aceitar); o resultado fica guardado em memória.
+async function firstLoad() {
+  try { await refresh(); console.log(`Conteúdo lido do CMS: ${site.posts.length} posts publicados`); return; }
+  catch (e) { console.warn('CMS fora do ar na partida (' + e.message + ').'); }
+  try { site = JSON.parse(fs.readFileSync(SNAPSHOT, 'utf8')); console.warn('Usando a última leitura boa guardada em disco.'); }
+  catch { site = { ...ssr.emptySite(CMS), redirects: [] }; console.warn('Sem leitura anterior: usando o conteúdo padrão.'); }
+  const retry = setInterval(() => refresh().then(() => { clearInterval(retry); console.log('CMS voltou: conteúdo atualizado.'); }).catch(() => {}), 60000);
+  retry.unref();
+}
+
+// ---------- Resposta: texto sai comprimido (brotli ou gzip); o resultado fica guardado em memória ----------
 const packed = new Map();
 function pack(req, key, buf) {
   const ae = String(req.headers['accept-encoding'] || ''), enc = /\bbr\b/.test(ae) ? 'br' : /\bgzip\b/.test(ae) ? 'gzip' : '';
-  if (!enc) return { buf, enc };
+  if (!enc || !key) return { buf, enc: '' };
   const id = enc + ':' + key;
   if (!packed.has(id)) packed.set(id, enc === 'br' ? zlib.brotliCompressSync(buf) : zlib.gzipSync(buf));
   return { buf: packed.get(id), enc };
 }
+const SECURITY = { 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'strict-origin-when-cross-origin' };
+function send(req, res, code, type, text, { key = '', cache = 'no-cache', headers = {} } = {}) {
+  const { buf, enc } = pack(req, key, Buffer.from(text));
+  res.writeHead(code, { 'Content-Type': type, 'Cache-Control': cache, Vary: 'Accept-Encoding', 'X-Frame-Options': 'DENY', ...SECURITY, ...(enc ? { 'Content-Encoding': enc } : {}), ...headers });
+  res.end(req.method === 'HEAD' ? undefined : buf);
+}
+const HTML = 'text/html; charset=utf-8';
+/** Página em cache: monta uma vez por endereço e reaproveita até o próximo revalidate. */
+function page(req, res, url, build, code = 200) {
+  if (!pages.has(url)) { const html = build(); if (html === null) return false; pages.set(url, html); }
+  send(req, res, code, HTML, pages.get(url), { key: 'page:' + url });
+  return true;
+}
+const homePage = () => fill(templates.home, ssr.home(site, BASE), { content: site.content });
+const blogShell = (p, state) => fill(templates.blog, p, state);
+
+const TYPES = { '.html': HTML, '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml' };
 const TEXT = new Set(['.html', '.js', '.css', '.svg', '.json', '.txt', '.xml']);
 function sendStatic(req, res, url) {
-  const rel = path.normalize(decodeURIComponent(url)).replace(/^([/\\]|\.\.[/\\])+/, '');
+  let rel; try { rel = path.normalize(decodeURIComponent(url)).replace(/^([/\\]|\.\.[/\\])+/, ''); } catch { return false; }
   const full = path.join(DIST, rel);
-  if (!full.startsWith(DIST + path.sep) || rel === 'template.html') return false;
+  if (!full.startsWith(DIST + path.sep) || /^template(-blog)?\.html$/.test(rel) || rel === 'index.html') return false;
   let st; try { st = fs.statSync(full); } catch { return false; }
   if (!st.isFile()) return false;
-  const immutable = rel.startsWith('assets' + path.sep);
-  const head = { 'Content-Type': TYPES[path.extname(full)] || 'application/octet-stream', 'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=3600', ...SECURITY };
-  if (TEXT.has(path.extname(full))) {
-    const { buf, enc } = pack(req, full + st.mtimeMs, fs.readFileSync(full));
-    res.writeHead(200, { ...head, 'Content-Length': buf.length, Vary: 'Accept-Encoding', ...(enc ? { 'Content-Encoding': enc } : {}) });
-    res.end(req.method === 'HEAD' ? undefined : buf);
-    return true;
-  }
-  res.writeHead(200, { ...head, 'Content-Length': st.size });
-  if (req.method === 'HEAD') { res.end(); return true; }
-  fs.createReadStream(full).pipe(res);
+  const ext = path.extname(full), cache = rel.startsWith('assets' + path.sep) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600';
+  if (TEXT.has(ext)) { send(req, res, 200, TYPES[ext], fs.readFileSync(full), { key: full + st.mtimeMs, cache }); return true; }
+  res.writeHead(200, { 'Content-Type': TYPES[ext] || 'application/octet-stream', 'Content-Length': st.size, 'Cache-Control': cache, ...SECURITY });
+  if (req.method === 'HEAD') res.end(); else fs.createReadStream(full).pipe(res);
   return true;
 }
 
+// ---------- Cotações: limite por IP, campo-isca e repasse ao CMS com o segredo do proxy ----------
+const hits = new Map();           // ip → horários dos últimos envios
+const QUOTE_MAX = 5, QUOTE_WINDOW = 10 * 60e3;
+function limited(ip) {
+  const now = Date.now(), list = (hits.get(ip) || []).filter((t) => now - t < QUOTE_WINDOW);
+  if (list.length >= QUOTE_MAX) { hits.set(ip, list); return true; }
+  list.push(now); hits.set(ip, list);
+  if (hits.size > 5000) for (const [k, v] of hits) if (!v.some((t) => now - t < QUOTE_WINDOW)) hits.delete(k);
+  return false;
+}
+async function quote(req, res) {
+  const b = await readBody(req, 20e3);
+  if (limited(ipOf(req))) return json(res, 429, { error: 'Muitos pedidos em pouco tempo. Aguarde alguns minutos.' });
+  if (str(b.website, 200)) return json(res, 200, { ok: true });         // robô preencheu o campo-isca: finge que deu certo e descarta
+  const data = { name: str(b.name, 120), contact: str(b.contact, 120), service: str(b.service, 120), message: str(b.message, 2000) };
+  if (!data.name || !data.contact) return json(res, 400, { error: 'Informe nome e contato.' });
+  const r = await fetch(CMS + '/api/quotes', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-quote-secret': SECRETS.quote }, body: JSON.stringify(data), signal: AbortSignal.timeout(15000) });
+  if (!r.ok) { console.warn('cotação: o CMS respondeu ' + r.status); return json(res, 502, { error: 'Não foi possível registrar o pedido agora.' }); }
+  json(res, 200, { ok: true });
+}
+
+// ---------- Prévia ao vivo: só com token curto assinado pelo CMS ----------
+function previewOk(token) {
+  const [exp, sig] = String(token || '').split('.');
+  if (!SECRETS.preview || !exp || !sig || !(Number(exp) > Date.now())) return false;
+  return safeEqual(sig, crypto.createHmac('sha256', SECRETS.preview).update(exp).digest('hex'));
+}
+const cmsOrigin = () => { try { return new URL(CMS).origin; } catch { return "'none'"; } };
+const previewHeaders = () => ({ 'X-Frame-Options': undefined, 'Content-Security-Policy': `frame-ancestors ${cmsOrigin()}`, 'X-Robots-Tag': 'noindex' });
+async function preview(req, res, q) {
+  const token = q.get('token');
+  if (!previewOk(token)) return send(req, res, 403, HTML, blogShell(ssr.notFound(site)), { cache: 'no-store' });
+  const secret = { 'x-preview-secret': SECRETS.preview };
+  let html;
+  if (q.get('kind') === 'post' && /^\d+$/.test(q.get('id') || '')) {
+    const raw = await get(CMS, `posts/${q.get('id')}?draft=true&depth=1`, secret), p = ssr.draftPost(raw);
+    html = blogShell(ssr.postPage(site, BASE, p), { content: site.content, preview: { token, kind: 'post', post: raw } });
+  } else {
+    const [home, settings] = await Promise.all([get(CMS, 'globals/home?depth=1', secret), get(CMS, 'globals/site-settings?depth=1', secret)]);
+    html = fill(templates.home, ssr.home(site, BASE), { content: site.content, preview: { token, kind: 'home', home, settings } });
+  }
+  const h = previewHeaders(); delete h['X-Frame-Options'];
+  const { buf } = pack(req, '', Buffer.from(html));
+  res.writeHead(200, { 'Content-Type': HTML, 'Cache-Control': 'no-store', ...SECURITY, ...h });
+  res.end(buf);
+}
+/** O painel envia o que está sendo digitado; o servidor repassa ao CMS, que devolve o documento completo. */
+async function previewData(req, res, q) {
+  if (!previewOk(q.get('token'))) return json(res, 403, { error: 'Prévia expirada. Reabra a prévia pelo painel.' });
+  const b = await readBody(req, 4e6);
+  if (!/^(globals\/(home|site-settings)|posts\/\d+)$/.test(String(b.endpoint))) return json(res, 400, { error: 'Pedido inválido.' });
+  const r = await fetch(`${CMS}/api/${b.endpoint}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Payload-HTTP-Method-Override': 'GET', 'x-preview-secret': SECRETS.preview },
+    body: JSON.stringify(b.data || {}), signal: AbortSignal.timeout(15000),
+  });
+  res.writeHead(r.status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
+  res.end(await r.text());
+}
+
 async function handle(req, res) {
-  const url = req.url.split('?')[0], ip = req.socket.remoteAddress;
+  const u = new URL(req.url, 'http://x'), q = u.searchParams;
+  let url = u.pathname;
   try {
-    if (url === '/' || url === '/index.html') {
-      const built = fs.statSync(path.join(DIST, 'template.html')).mtimeMs;
-      if (!page || built !== pageBuild) { page = buildPage(); pageBuild = built; pageId = crypto.randomUUID(); }
-      const { buf, enc } = pack(req, 'page' + pageId, Buffer.from(page));
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding', ...(enc ? { 'Content-Encoding': enc } : {}), ...SECURITY });
-      return res.end(req.method === 'HEAD' ? undefined : buf);
-    }
-    if (url === '/api/content' && req.method === 'GET') return send(res, 200, { content: read('content.json', null) });
-    if (url === '/api/login' && req.method === 'POST') {
-      if (throttled(ip)) return send(res, 429, { error: 'Muitas tentativas. Aguarde 15 minutos.' });
-      const { password } = await body(req);
-      if (typeof password !== 'string' || !check(password, auth)) { fail(ip); return send(res, 401, { error: 'Senha incorreta.' }); }
-      const token = crypto.randomBytes(32).toString('hex'); sessions.set(token, Date.now() + TTL);
-      return send(res, 200, { token });
-    }
-    if (url === '/api/leads' && req.method === 'POST') {
-      const b = await body(req), lead = { id: crypto.randomUUID(), at: new Date().toISOString(), name: str(b.name, 120), contact: str(b.contact, 120), service: str(b.service, 120), message: str(b.message, 2000) };
-      if (!lead.name || !lead.contact) return send(res, 400, { error: 'Informe nome e contato.' });
-      const all = read('leads.json', []); all.unshift(lead); write('leads.json', all.slice(0, 1000));
-      return send(res, 200, { ok: true });
-    }
-    if (url.startsWith('/api/')) {
-      if (!authed(req)) return send(res, 401, { error: 'Entre no portal novamente.' });
-      if (url === '/api/content' && req.method === 'PUT') {
-        const { content } = await body(req);
-        if (!content || typeof content !== 'object') return send(res, 400, { error: 'Conteúdo inválido.' });
-        write('content.json', content); page = null; for (const k of packed.keys()) if (k.includes(':page')) packed.delete(k);
-        return send(res, 200, { ok: true });
+    if (req.method === 'POST') {
+      if (url === '/api/revalidate') {
+        if (!safeEqual(req.headers['x-revalidate-secret'] || '', SECRETS.revalidate)) return json(res, 401, { error: 'Não autorizado.' });
+        await refresh(); return json(res, 200, { ok: true, posts: site.posts.length });
       }
-      if (url === '/api/leads' && req.method === 'GET') return send(res, 200, { leads: read('leads.json', []) });
-      if (url.startsWith('/api/leads/') && req.method === 'DELETE') { const id = decodeURIComponent(url.slice(11)); write('leads.json', read('leads.json', []).filter(l => l.id !== id)); return send(res, 200, { ok: true }); }
-      if (url === '/api/password' && req.method === 'POST') {
-        const { old, neu } = await body(req);
-        if (typeof old !== 'string' || !check(old, auth)) return send(res, 400, { error: 'A senha atual não confere.' });
-        if (typeof neu !== 'string' || neu.length < 8) return send(res, 400, { error: 'A nova senha precisa de pelo menos 8 caracteres.' });
-        auth = hash(neu); write('auth.json', auth); return send(res, 200, { ok: true });
-      }
-      return send(res, 404, { error: 'Não encontrado.' });
+      if (url === '/api/quote') return await quote(req, res);
+      if (url === '/api/preview-data') return await previewData(req, res, q);
+      return json(res, 404, { error: 'Não encontrado.' });
     }
-    if ((req.method === 'GET' || req.method === 'HEAD') && sendStatic(req, res, url)) return;
-    send(res, 404, { error: 'Não encontrado.' });
-  } catch (e) { send(res, 400, { error: e.message }); }
+    if (req.method !== 'GET' && req.method !== 'HEAD') return json(res, 405, { error: 'Método não aceito.' });
+    if (url.length > 1 && url.endsWith('/')) { res.writeHead(301, { Location: url.slice(0, -1) + u.search }); return res.end(); }
+    if (url === '/index.html') { res.writeHead(301, { Location: '/' }); return res.end(); }
+
+    if (url === '/') return page(req, res, url, homePage);
+    if (url === '/preview') return await preview(req, res, q);
+    if (url === '/blog/feed.xml') return send(req, res, 200, 'application/rss+xml; charset=utf-8', ssr.rss(site, BASE), { cache: 'public, max-age=300' });
+    if (url === '/sitemap.xml') return send(req, res, 200, 'application/xml; charset=utf-8', ssr.map(site, BASE), { cache: 'public, max-age=300' });
+    if (url === '/robots.txt') return send(req, res, 200, 'text/plain; charset=utf-8', `User-agent: *\nAllow: /\nDisallow: /preview\nDisallow: /api/\n${BASE ? `Sitemap: ${BASE}/sitemap.xml\n` : ''}`);
+
+    let m = /^\/blog(?:\/categoria\/([a-z0-9-]+))?(?:\/pagina\/(\d+))?$/.exec(url);
+    if (m && m[2] !== '1') {
+      if (page(req, res, url, () => { const p = ssr.list(site, BASE, { category: m[1], page: Number(m[2] || 1) }); return p && blogShell(p); })) return;
+    } else if ((m = /^\/blog\/([a-z0-9-]+)$/.exec(url))) {
+      const p = ssr.findPost(site, m[1]);           // só há posts publicados na memória: rascunho nunca chega aqui
+      if (p) return page(req, res, url, () => blogShell(ssr.postPage(site, BASE, p)));
+    }
+    if (sendStatic(req, res, url)) return;
+    const to = (site.redirects || []).find((r) => r.from === url);   // links antigos cadastrados no CMS
+    if (to) { res.writeHead(301, { Location: to.to }); return res.end(); }
+    send(req, res, 404, HTML, blogShell(ssr.notFound(site)), { key: 'page:404' });
+  } catch (e) {
+    console.warn(`${req.method} ${url}: ${e.message}`);
+    if (!res.headersSent) json(res, 500, { error: 'Erro ao montar a página.' });
+  }
 }
 
 (async () => {
-  try { ({ renderPage } = await import('./dist-server/ssr.js')); fs.accessSync(path.join(DIST, 'template.html')); }
-  catch { console.error('Build não encontrado. Rode "npm run build" antes de iniciar o servidor.'); process.exit(1); }
-  http.createServer(handle).listen(PORT, () => console.log('Site no ar: http://localhost:' + PORT + '  ·  portal: http://localhost:' + PORT + '/#portal'));
+  try {
+    ssr = await import('./dist-server/ssr.js');
+    templates = { home: fs.readFileSync(path.join(DIST, 'template.html'), 'utf8'), blog: fs.readFileSync(path.join(DIST, 'template-blog.html'), 'utf8') };
+  } catch { console.error('Build não encontrado. Rode "npm run build" antes de iniciar o servidor.'); process.exit(1); }
+  if (!CMS) console.warn('CMS_URL não definido: o site fica com o conteúdo padrão e sem blog.');
+  for (const [k, v] of Object.entries(SECRETS)) if (!v) console.warn(`Segredo "${k}" não definido: a função correspondente fica desligada.`);
+  await firstLoad();
+  http.createServer(handle).listen(PORT, () => console.log('Site no ar na porta ' + PORT));
 })();

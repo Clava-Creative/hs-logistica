@@ -1,0 +1,17 @@
+/* Cartões de post: usados na seção "Do blog" da página inicial e na lista do blog */
+.head--row{grid-template-columns:minmax(0,1fr) auto;align-items:end}
+.more{display:inline-flex;align-items:center;gap:8px;font-weight:600;text-decoration:none;padding-block:10px}
+.more svg{width:18px;height:18px;transition:transform .25s var(--ease)}
+.more:hover svg{transform:translateX(4px)}
+.more:hover span{text-decoration:underline}
+.post-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:36px 28px}
+.post-card__link{display:grid;gap:10px;align-content:start;text-decoration:none;height:100%}
+.post-card__cover{aspect-ratio:16/10;border-radius:var(--r-lg);overflow:hidden;background:var(--deep);margin-bottom:6px}
+.post-card__cover img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .6s var(--ease)}
+.post-card__link:hover .post-card__cover img{transform:scale(1.03)}
+.post-card__meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--muted)}
+.post-card__meta span{color:var(--accent);font-weight:600}
+.post-card :is(h2,h3){font-size:22px;line-height:1.18;font-weight:700;font-stretch:100%;letter-spacing:-.01em;max-width:none}
+.post-card__link:hover :is(h2,h3){text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:.18em}
+.post-card p:last-child{color:var(--muted);font-size:16px}
+@media(max-width:560px){.head--row{grid-template-columns:1fr}}

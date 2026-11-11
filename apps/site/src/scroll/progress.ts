@@ -4,7 +4,7 @@ import { scrollToEl } from './lenis';
 
 export const SECTIONS = [
   { id: 'inicio', label: 'Início' }, { id: 'servicos', label: 'Serviços' }, { id: 'localizacao', label: 'Localização' },
-  { id: 'etapas', label: 'Etapas' }, { id: 'empresa', label: 'Empresa' }, { id: 'duvidas', label: 'Dúvidas' }, { id: 'contato', label: 'Cotação' },
+  { id: 'etapas', label: 'Etapas' }, { id: 'empresa', label: 'Empresa' }, { id: 'blog', label: 'Blog' }, { id: 'duvidas', label: 'Dúvidas' }, { id: 'contato', label: 'Cotação' },
 ];
 
 let bar: HTMLElement, dots: HTMLElement;

@@ -1,6 +1,6 @@
 // Entrada da cena 3D. Este arquivo (e o three inteiro) só é baixado depois do primeiro paint, por import().
 import { S } from '../content/store';
-import { onTheme, onAdmin } from '../app';
+import { onTheme, onEditing } from '../app';
 import { onQuoteSent } from '../forms';
 import { story, onStory } from '../scroll/story';
 import { reducedMotion } from '../ui';
@@ -50,7 +50,8 @@ export async function mount(q: Quality): Promise<() => void> {
   }
 
   function frame(dt: number, t: number): boolean {
-    const sec = story.sec, p = story.p[sec] ?? 0, idx = ORDER.indexOf(sec);
+    // a seção "Do blog" não tem enquadramento próprio: vale o mesmo plano parado da seção de dúvidas
+    const sec = story.sec === 'blog' ? 'duvidas' : story.sec, p = story.p[sec] ?? 0, idx = ORDER.indexOf(sec);
     const live = LIVE.has(sec) && !still;
     if (live) time = t;
     rig.target(sec, p, story.svc);
@@ -82,7 +83,7 @@ export async function mount(q: Quality): Promise<() => void> {
 
   let lastSec = story.sec, fadeT = 0;
   const offStory = onStory(() => {
-    loop.live = LIVE.has(story.sec) && !still && !S.admin;
+    loop.live = LIVE.has(story.sec) && !still && !S.editing;
     if (still && story.sec !== lastSec) {            // movimento reduzido: um quadro parado por seção, trocado com fade
       lastSec = story.sec; canvas.classList.add('is-fading'); clearTimeout(fadeT);
       fadeT = window.setTimeout(() => { snap = true; loop.invalidate(); canvas.classList.remove('is-fading'); }, 260);
@@ -93,11 +94,11 @@ export async function mount(q: Quality): Promise<() => void> {
 
   const onMove = (e: PointerEvent): void => { rig.pointer(e.clientX / w * 2 - 1, e.clientY / h * 2 - 1); if (story.sec === 'inicio') loop.invalidate(); };
   if (budget.parallax && !still) addEventListener('pointermove', onMove, { passive: true });
-  const onVis = (): void => loop.setPaused(document.hidden || S.admin);
+  const onVis = (): void => loop.setPaused(document.hidden || S.editing);
   document.addEventListener('visibilitychange', onVis);
   addEventListener('resize', resize);
   onTheme(() => { paint(); loop.invalidate(); });
-  onAdmin((on) => { loop.live = false; loop.setPaused(on || document.hidden); if (!on) loop.invalidate(); });
+  onEditing((on) => { loop.live = false; loop.setPaused(on || document.hidden); if (!on) loop.invalidate(); });
   onQuoteSent(() => { if (!still) { cargo.launch(); loop.invalidate(); } });
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); loop.setPaused(true); document.documentElement.classList.remove('has-3d'); canvas.classList.remove('is-ready'); });
   canvas.addEventListener('webglcontextrestored', () => { document.documentElement.classList.add('has-3d'); canvas.classList.add('is-ready'); loop.setPaused(false); });
@@ -107,8 +108,8 @@ export async function mount(q: Quality): Promise<() => void> {
   await breathe();
   try { await renderer.compileAsync(scene, camera); } catch { /* compila no primeiro quadro */ }
   resize();
-  loop.live = LIVE.has(story.sec) && !still && !S.admin;
-  loop.setPaused(S.admin || document.hidden);
+  loop.live = LIVE.has(story.sec) && !still && !S.editing;
+  loop.setPaused(S.editing || document.hidden);
   // primeiro quadro desenhado: troca o pôster pela cena com crossfade
   requestAnimationFrame(() => { document.documentElement.classList.add('has-3d'); canvas.classList.add('is-ready'); });
 

@@ -1,8 +1,7 @@
-import { T, X, ADD, type Ctx } from './html';
+import { esc, type Ctx } from './html'
 
-export const faq = ({ c, admin }: Ctx): string => `
+export const faq = ({ c }: Ctx): string => `
 <section id="duvidas" class="veil-full"><div class="wrap">
-  <div class="head">${T('faq.title', 'h2')}</div>
-  <div class="faq">${c.faq.items.map((_, i) => `<details class="qa"${admin ? ' open' : ''}>${X('faq.items', i)}<summary>${T(`faq.items.${i}.q`, 'h3')}</summary>${T(`faq.items.${i}.a`, 'p')}</details>`).join('')}</div>
-  ${ADD('faq.items')}
-</div></section>`;
+  <div class="head"><h2>${esc(c.faq.title)}</h2></div>
+  <div class="faq">${c.faq.items.map((f) => `<details class="qa"><summary><h3>${esc(f.q)}</h3></summary><p>${esc(f.a)}</p></details>`).join('')}</div>
+</div></section>`

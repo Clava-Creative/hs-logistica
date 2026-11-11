@@ -1,0 +1,21 @@
+/* Texto do post: coluna de cerca de 68 caracteres, corpo maior e entrelinha folgada */
+.prose{max-width:calc(68ch + 2*var(--gut));margin-inline:auto;padding-inline:var(--gut);font-size:19px;line-height:1.72;overflow-wrap:break-word}
+.prose>*{margin-block:0}
+.prose>*+*{margin-top:1.15em}
+.prose :is(h2,h3,h4){font-family:var(--display);line-height:1.15;letter-spacing:-.015em;max-width:none;text-wrap:balance}
+.prose h2{font-size:30px;font-weight:800;margin-top:2em}
+.prose h3{font-size:23px;font-weight:700;margin-top:1.7em}
+.prose h4{font-size:19px;font-weight:700;margin-top:1.5em}
+.prose a{color:var(--accent);text-decoration-thickness:1.5px}
+.prose a:hover{text-decoration-thickness:2.5px}
+.prose strong{font-weight:600}
+.prose :is(ul,ol){padding-left:1.3em}
+.prose li+li{margin-top:.4em}
+.prose li::marker{color:var(--accent)}
+.prose blockquote{margin-inline:0;padding:4px 0 4px 22px;border-left:3px solid var(--accent);font-size:21px;color:var(--fg)}
+.prose hr{border:0;border-top:1px solid var(--line);margin-block:2.2em}
+.prose figure{margin-inline:0}
+.prose img{display:block;max-width:100%;height:auto;border-radius:var(--r-lg)}
+.prose code{font:.88em var(--mono);background:var(--deep);padding:.12em .4em;border-radius:4px}
+.prose table{display:block;overflow-x:auto;border-collapse:collapse;font-size:16px;font-variant-numeric:tabular-nums}
+.prose :is(th,td){border:1px solid var(--line);padding:9px 12px;text-align:left}

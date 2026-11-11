@@ -74,6 +74,9 @@ importers:
 
   apps/site:
     dependencies:
+      '@payloadcms/live-preview':
+        specifier: 3.93.0
+        version: 3.93.0
       gsap:
         specifier: ^3.15.1
         version: 3.15.1
@@ -1579,6 +1582,9 @@ packages:
     peerDependencies:
       graphql: ^16.8.1
       payload: 3.93.0
+
+  '@payloadcms/live-preview@3.93.0':
+    resolution: {integrity: sha512-7nOOh0J++hyGxPrQnMMw7r9h/QOQepjChM6G2DumqsahEn/j3dhrJd7By4dyXhSxb2810yPEObIYgGt4BP15QQ==}
 
   '@payloadcms/next@3.93.0':
     resolution: {integrity: sha512-0GY+aXr7m0JoY9Vty7K/qdKjMMQLDBNMp/qT1+tYi+cJhT44Vvtx3DyEPWVtavjsxV18tJ2qd8jBEhocY0hT8w==}
@@ -5103,6 +5109,8 @@ snapshots:
       tsx: 4.23.15
     transitivePeerDependencies:
       - typescript
+
+  '@payloadcms/live-preview@3.93.0': {}
 
   '@payloadcms/next@3.93.0(@types/react@19.2.14)(graphql@16.15.0)(monaco-editor@0.57.0)(next@16.4.1(@opentelemetry/api@1.10.0)(@types/node@22.19.9)(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(sass@1.77.4))(payload@3.93.0(graphql@16.15.0)(typescript@5.7.3))(react-dom@19.2.9(react@19.2.9))(react@19.2.9)(typescript@5.7.3)':
     dependencies:

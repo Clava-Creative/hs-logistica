@@ -1,9 +1,9 @@
-import { T, esc, logoSrc, LOCK, type Ctx } from './html';
+import { esc, logoSrc, type Ctx } from './html'
 
-export const nav = ({ c }: Ctx): string => `
+/** `home` é o prefixo das âncoras: vazio na página inicial, "/" nas páginas do blog. */
+export const nav = ({ c }: Ctx, home = ''): string => `
 <header class="nav-bar"><div class="wrap nav">
-  <a class="logo" href="#inicio"><img src="${logoSrc(c)}" alt="HS" width="77" height="44"><span>${T('brand.name')}<small>${T('brand.tag')}</small></span></a>
-  <nav aria-label="Seções"><a href="#servicos">Serviços</a><a href="#localizacao">Localização</a><a href="#empresa">Empresa</a><a href="#duvidas">Dúvidas</a></nav>
-  <button class="portal-link" data-act="portal" aria-label="Portal do cliente">${LOCK}Portal</button>
-  <a class="btn btn-primary btn-sm" href="#contato">${esc(c.hero.cta1)}</a>
-</div></header>`;
+  <a class="logo" href="${home || '#inicio'}"><img src="${esc(logoSrc(c))}" alt="HS" width="77" height="44"><span>${esc(c.brand.name)}<small>${esc(c.brand.tag)}</small></span></a>
+  <nav aria-label="Seções"><a href="${home}#servicos">Serviços</a><a href="${home}#localizacao">Localização</a><a href="${home}#empresa">Empresa</a><a href="/blog">Blog</a><a href="${home}#duvidas">Dúvidas</a></nav>
+  <a class="btn btn-primary btn-sm" href="${home}#contato">${esc(c.hero.cta1)}</a>
+</div></header>`

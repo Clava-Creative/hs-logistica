@@ -79,7 +79,8 @@ export default buildConfig({
   }) : undefined,
   // fila que publica os posts agendados; roda a cada minuto dentro do próprio serviço do CMS
   jobs: { autoRun: [{ cron: '* * * * *', queue: 'default', limit: 20 }], shouldAutoRun: () => true },
-  typescript: { outputFile: path.resolve(dirname, '../../../packages/types/payload-types.ts') },
+  // os tipos gerados são compartilhados com o site; a declaração para o Payload fica em src/payload.d.ts
+  typescript: { outputFile: path.resolve(dirname, '../../../packages/types/payload-types.ts'), declare: false },
   db: postgresAdapter({ pool: { connectionString: e.DATABASE_URI || e.DATABASE_URL || '' } }),
   sharp,
   plugins,

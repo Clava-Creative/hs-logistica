@@ -17,13 +17,13 @@ main{padding-top:78px}
 .dots button:hover span,.dots button:focus-visible span{opacity:1;transform:none}
 .dots button[aria-current]{color:var(--fg)}
 .dots button[aria-current]::after{background:var(--accent);border-color:var(--accent);transform:scale(1.5)}
-body.admin .dots,body.admin .progress{display:none}
+body.editing .dots,body.editing .progress{display:none}
 /* Cena 3D: um único canvas fixo atrás do conteúdo, e os rótulos de cidade em HTML por cima dele */
 .scene{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:0;transition:opacity .9s var(--ease)}
 .scene.is-ready{opacity:1}
 .scene.is-fading{opacity:0;transition-duration:.25s}
-body.admin .scene{opacity:.22}
+body.editing .scene{opacity:.22}
 .labels{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
 .labels span{position:absolute;left:0;top:0;font:500 12px/1 var(--mono);color:var(--fg);white-space:nowrap;padding:5px 8px;border-radius:var(--r);background:color-mix(in srgb,var(--ink) 70%,transparent);opacity:0;transition:opacity .35s;will-change:transform}
 .labels span.on{opacity:1}
-body.admin .labels{display:none}
+body.editing .labels{display:none}

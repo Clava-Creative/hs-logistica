@@ -14,5 +14,6 @@ input:hover,textarea:hover,select:hover{border-color:var(--muted)}
 input:focus,textarea:focus,select:focus{outline:0;border-color:var(--ink);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 45%,transparent)}
 input::placeholder,textarea::placeholder{color:var(--muted)}
 textarea{min-height:112px;resize:vertical}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}   /* campo-isca para robôs; ninguém vê nem alcança pelo teclado */
 .err{color:var(--bad);font-size:13.5px;font-weight:400}
 .msg{font-size:15px;font-weight:500}.msg.ok{color:var(--ok)}.msg.bad{color:var(--bad)}

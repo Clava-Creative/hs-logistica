@@ -11,7 +11,7 @@ export const Posts: CollectionConfig = {
   labels: { singular: 'Post', plural: 'Posts' },
   admin: {
     group: 'Blog', useAsTitle: 'title', defaultColumns: ['title', '_status', 'publishedAt', 'categories'],
-    livePreview: { url: ({ data }) => previewUrl('post', String(data?.slug || '')) },
+    livePreview: { url: ({ data }) => previewUrl('post', String(data?.id || '')) },
   },
   access: { read: publishedOrLoggedIn, create: loggedIn, update: loggedIn, delete: loggedIn },
   versions: { drafts: { autosave: { interval: 1500 }, schedulePublish: true }, maxPerDoc: 25 },

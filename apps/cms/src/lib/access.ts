@@ -6,23 +6,25 @@ import { env } from './env'
 type Role = 'admin' | 'editor'
 const role = (req: PayloadRequest): Role | undefined => (req.user as { role?: Role } | null)?.role
 
+export function safeEqual(a: string, b: string): boolean {
+  const x = Buffer.from(a), y = Buffer.from(b)
+  return x.length === y.length && x.length > 0 && timingSafeEqual(x, y)
+}
 export const anyone: Access = () => true
 export const loggedIn: Access = ({ req }) => !!req.user
 export const adminOnly: Access = ({ req }) => role(req) === 'admin'
 export const adminOnlyField: FieldAccess = ({ req }) => role(req) === 'admin'
 
-/** Visitante só enxerga o que está publicado; quem está logado enxerga rascunhos também. */
-export const publishedOrLoggedIn: Access = ({ req }) => (req.user ? true : { _status: { equals: 'published' } })
+/** O servidor do site lê rascunhos para a prévia ao vivo, identificando-se com o PREVIEW_SECRET. */
+const sitePreview = (req: PayloadRequest): boolean => safeEqual(req.headers.get('x-preview-secret') || '', env.previewSecret)
+
+/** Visitante só enxerga o que está publicado; quem está logado (ou a prévia do site) enxerga rascunhos também. */
+export const publishedOrLoggedIn: Access = ({ req }) => (req.user || sitePreview(req) ? true : { _status: { equals: 'published' } })
 
 /** Admin vê e edita qualquer usuário; os demais, só a própria conta. */
 export const adminOrSelf: Access = ({ req }) => {
   if (!req.user) return false
   return role(req) === 'admin' ? true : { id: { equals: req.user.id } }
-}
-
-export function safeEqual(a: string, b: string): boolean {
-  const x = Buffer.from(a), y = Buffer.from(b)
-  return x.length === y.length && x.length > 0 && timingSafeEqual(x, y)
 }
 
 /** Cotações só entram pelo proxy do site (que aplica o limite por IP) ou por alguém logado no admin. */

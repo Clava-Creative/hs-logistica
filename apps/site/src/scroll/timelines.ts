@@ -78,7 +78,7 @@ async function build(): Promise<void> {
   teardown();
   const mine = gen;
   story.p = {}; story.svc = 0; story.step = 0;
-  if (S.admin) { stopLenis(); emitStory(); return; }   // editando: página parada, sem pins nem scroll suave
+  if (S.editing) { stopLenis(); emitStory(); return; }   // editando: página parada, sem pins nem scroll suave
   startLenis();
   if (reducedMotion()) {
     // sem scrub nem pin: cada seção vale como um quadro parado, já no fim do seu movimento
@@ -102,7 +102,7 @@ export function initScroll(): void {
   onSection((id) => { story.sec = id; emitStory(); });
   // âncoras passam pelo mesmo scroll, com desconto da barra do topo
   document.addEventListener('click', (e) => {
-    if (S.admin) return;
+    if (S.editing) return;
     const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#"]');
     const el = a && document.getElementById(a.getAttribute('href')!.slice(1));
     if (!a || !el) return;

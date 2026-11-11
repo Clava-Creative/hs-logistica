@@ -45,14 +45,14 @@ for (const [i, p] of c.photos.entries()) {
 await payload.updateGlobal({
   slug: 'home',
   data: {
-    hero: { title: c.hero.title, title2: c.hero.title2, sub: c.hero.sub, cta1: c.hero.cta1, cta2: c.hero.cta2, facts: c.hero.facts.filter(Boolean).map((text) => ({ text })), photo: heroPhoto },
+    hero: { title: c.hero.title, title2: c.hero.title2, sub: c.hero.sub, cta1: c.hero.cta1, cta2: c.hero.cta2, facts: c.hero.facts.filter(Boolean).map((text) => ({ text })), photo: heroPhoto ?? null },
     services: c.services, photos, where: c.where, steps: c.steps, about: c.about, faq: c.faq,
   },
 })
 await payload.updateGlobal({
   slug: 'site-settings',
   data: {
-    brand: { name: c.brand.name, tag: c.brand.tag, logo },
+    brand: { name: c.brand.name, tag: c.brand.tag, logo: logo ?? null },
     theme: c.theme,
     contact: { ...c.contact, email: c.contact.email || undefined },
     footer: c.footer,

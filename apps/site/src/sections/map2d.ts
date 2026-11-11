@@ -26,7 +26,7 @@ export function startMap(): void {
   stopMap();
   const cv = document.getElementById('map') as HTMLCanvasElement | null;
   if (!cv) return;
-  if (!logoImg) { logoImg = new Image(); logoImg.src = logoSrc(S.C); }
+  if (!logoImg) { logoImg = new Image(); logoImg.crossOrigin = 'anonymous'; logoImg.src = logoSrc(S.C); }
   const logo = logoImg, ctx = cv.getContext('2d') as CanvasRenderingContext2D, still = reducedMotion();
 
   function frame(ms: number): void {

@@ -1,7 +1,7 @@
 // Pôster estático da abertura: a mesma vista aérea da fronteira que a primeira câmera da cena 3D mostra.
 // É SVG escrito direto no HTML, então aparece antes de qualquer JavaScript e some quando a cena fica pronta.
-import { logoSrc } from './html';
-import type { Content } from '../content/default';
+import { esc, logoSrc } from './html';
+import type { Content } from '../content/model';
 
 const city = (x: number, y: number, name: string, dx: number, dy: number): string =>
   `<circle cx="${x}" cy="${y}" r="5" fill="#fff"/><text x="${x + dx}" y="${y + dy}" font-size="14" font-weight="500" style="fill:var(--fg)">${name}</text>`;
@@ -21,5 +21,5 @@ export const poster = (c: Content): string => `
   <text x="530" y="94" text-anchor="end" font-size="14" font-weight="500" style="fill:var(--accent)">BR-277 para Paranaguá</text>
   <circle cx="397" cy="216" r="58" fill="none" style="stroke:var(--accent)" stroke-width="2" opacity=".55"/>
   <rect x="342" y="182" width="110" height="68" rx="10" fill="#fff"/>
-  <image href="${logoSrc(c)}" x="354" y="192" width="86" height="49" preserveAspectRatio="xMidYMid meet"/>
+  <image href="${esc(logoSrc(c))}" x="354" y="192" width="86" height="49" preserveAspectRatio="xMidYMid meet"/>
 </svg>`;

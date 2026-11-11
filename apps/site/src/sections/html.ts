@@ -1,33 +1,30 @@
 // Peças comuns às seções. Todo texto que vem do conteúdo passa por esc().
-import type { Content } from '../content/default';
+import type { Content, Img } from '../content/model'
 
-export interface Ctx { c: Content; admin: boolean }
-let cur: Ctx;
-export const setCtx = (x: Ctx): void => { cur = x; };
+export interface Ctx { c: Content }
 
 export const esc = (s: unknown): string =>
-  String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string));
+  String(s ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] as string))
 
-const at = (p: string): unknown => p.split('.').reduce<unknown>((o, k) => (o as Record<string, unknown> | undefined)?.[k], cur.c);
+/** Só endereços http(s) ou do próprio site entram em src e href. */
+export const safeUrl = (u: unknown): string => (typeof u === 'string' && /^(https?:\/\/|\/(?!\/))/.test(u) ? u : '')
 
-/** Texto editável no portal: o caminho em data-p diz qual campo do conteúdo ele altera. */
-export const T = (p: string, tag = 'span', cls = '', ph = 'Clique para escrever'): string =>
-  `<${tag}${cls ? ` class="${cls}"` : ''} data-p="${p}" data-ph="${ph}">${esc(at(p))}</${tag}>`;
-export const X = (list: string, i: number): string =>
-  `<button class="x" data-del="${list}" data-i="${i}" aria-label="Remover item">×</button>`;
-export const ADD = (list: string): string => `<button class="add" data-add="${list}">+ Adicionar item</button>`;
+export const logoSrc = (c: Content): string => safeUrl(c.brand.logo?.url) || '/logo.png'
+export const wa = (n: string): string => 'https://wa.me/' + n.replace(/\D/g, '').replace(/^(?!55)/, '55')
 
-/** Só aceita imagem embutida (data URL) nos formatos que o portal grava. */
-export const img = (s: unknown): string =>
-  typeof s === 'string' && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(s) ? s : '';
-export const logoSrc = (c: Content): string => img(c.brand.logo) || 'logo.png';
-export const wa = (n: string): string => 'https://wa.me/' + n.replace(/\D/g, '').replace(/^(?!55)/, '55');
+/** <img> com os tamanhos gerados pelo CMS em srcset. `sizes` diz quanto da tela a imagem ocupa. */
+export function picture(m: Img, sizes: string, cls = '', lazy = true): string {
+  const list = (['thumb', 'card', 'hero'] as const).map((k) => m.sizes[k]).filter((s) => !!s && !!safeUrl(s.url))
+  const best = list[list.length - 1]
+  const srcset = list.map((s) => `${esc(s!.url)} ${s!.width}w`).join(', ')
+  return `<img${cls ? ` class="${cls}"` : ''} src="${esc(safeUrl(best?.url || m.url))}"${srcset ? ` srcset="${srcset}" sizes="${sizes}"` : ''} alt="${esc(m.alt)}" width="${best?.width || m.width}" height="${best?.height || m.height}"${lazy ? ' loading="lazy" decoding="async"' : ''}>`
+}
 
-export const tools = (path: string, has: string): string => cur.admin
-  ? `<div class="photo-tools"><button class="tool" data-act="pick" data-path="${path}">${has ? 'Trocar foto' : 'Enviar foto'}</button>${has ? `<button class="tool" data-act="unpick" data-path="${path}">Remover</button>` : ''}</div>`
-  : '';
+export const fmtDate = (iso: string): string => {
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Sao_Paulo' })
+}
 
 const svg = (d: string): string =>
-  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
-export const ARROW = svg('<path d="M5 12h14M13 6l6 6-6 6"/>');
-export const LOCK = svg('<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>');
+  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+export const ARROW = svg('<path d="M5 12h14M13 6l6 6-6 6"/>')

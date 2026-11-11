@@ -14,11 +14,12 @@ import './styles/sections/photos.css';
 import './styles/sections/where.css';
 import './styles/sections/steps.css';
 import './styles/sections/about.css';
+import './styles/sections/blog.css';
 import './styles/sections/faq.css';
 import './styles/sections/contact.css';
 import './styles/sections/footer.css';
 import './styles/scroll.css';
-import { S, load } from './content/store';
+import { load } from './content/store';
 import { render, onRender } from './app';
 import { initForms } from './forms';
 import { startMap } from './sections/map2d';
@@ -26,24 +27,14 @@ import { detect } from './three/quality';
 import { reducedMotion } from './ui';
 import { initScroll } from './scroll/timelines';
 
-const admin = () => import('./admin/portal');
-
-async function boot(): Promise<void> {
-  await load();
+function boot(): void {
+  load();
   initForms();
   initScroll();
-  // O portal é um pedaço separado: só baixa quando alguém clica em "Portal" ou já tem sessão aberta.
-  document.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest('[data-act="portal"]');
-    if (b && !S.admin) void admin().then((m) => m.openPortal());
-  });
-  let resumed = false;
-  try {
-    if (S.mode === 'server' && sessionStorage.getItem('hs_tok')) resumed = await (await admin()).resume();
-  } catch { /* sem sessão */ }
-  if (!resumed) render(!S.prerendered);
+  render(false);            // o HTML já veio pronto do servidor: só liga tema, scroll e formulário
   setTimeout(() => document.body.classList.add('entered'), 1600);
-  if (location.hash === '#portal' && !S.admin) void admin().then((m) => m.openPortal());
+  const p = window.__HS__?.preview;
+  if (p?.kind === 'home') void import('./preview').then((m) => m.startHomePreview(p as unknown as import('./preview').PreviewState));
 }
 
 /** Sem WebGL: o pôster fica e o mapa 2D animado entra por cima dele, na mesma janela da abertura. */
@@ -72,4 +63,5 @@ function schedule3D(): void {
   else setTimeout(go, 1200);
 }
 
-void boot().then(schedule3D);
+boot();
+schedule3D();
