@@ -1,8 +1,9 @@
-// Servidor do site HS Logística: entrega o site e guarda o que o cliente altera no portal.
-// Sem dependências. Uso: ADMIN_PASSWORD="sua-senha" node server.js
+// Servidor do site HS Logística: entrega o build (dist/) e guarda o que o cliente altera no portal.
+// Sem dependências. Uso: npm run build && ADMIN_PASSWORD="sua-senha" node server.cjs
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
+const DIST = path.join(__dirname, 'dist');
 const DATA = path.join(__dirname, 'data');
 fs.mkdirSync(DATA, { recursive: true });
 const file = n => path.join(DATA, n);
@@ -31,12 +32,38 @@ const send = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'appli
 const body = req => new Promise((ok, no) => { let s = ''; req.on('data', c => { s += c; if (s.length > 8e6) { no(new Error('grande demais')); req.destroy(); } }); req.on('end', () => { try { ok(JSON.parse(s || '{}')); } catch { no(new Error('JSON inválido')); } }); });
 const str = (v, max) => String(v ?? '').slice(0, max).trim();
 
-http.createServer(async (req, res) => {
+// ---------- Página: o HTML sai com o conteúdo salvo já escrito e o mesmo conteúdo embutido para o JS ----------
+const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml' };
+const SECURITY = { 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' };
+let renderPage = null, page = null;       // page: HTML pronto, refeito quando o conteúdo muda
+const inline = v => JSON.stringify(v).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, c => '\\u' + c.charCodeAt(0).toString(16));
+function buildPage() {
+  const template = fs.readFileSync(path.join(DIST, 'template.html'), 'utf8');
+  const saved = read('content.json', null);
+  const { html } = renderPage(saved);
+  return template.replace('<!--app-->', () => html).replace('<!--head-->', '')
+    .replace('<!--state-->', () => `<script>window.__HS__=${inline({ content: saved })}</script>`);
+}
+function sendStatic(req, res, url) {
+  const rel = path.normalize(decodeURIComponent(url)).replace(/^([/\\]|\.\.[/\\])+/, '');
+  const full = path.join(DIST, rel);
+  if (!full.startsWith(DIST + path.sep) || rel === 'template.html') return false;
+  let st; try { st = fs.statSync(full); } catch { return false; }
+  if (!st.isFile()) return false;
+  const immutable = rel.startsWith('assets' + path.sep);
+  res.writeHead(200, { 'Content-Type': TYPES[path.extname(full)] || 'application/octet-stream', 'Content-Length': st.size, 'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=3600', ...SECURITY });
+  if (req.method === 'HEAD') { res.end(); return true; }
+  fs.createReadStream(full).pipe(res);
+  return true;
+}
+
+async function handle(req, res) {
   const url = req.url.split('?')[0], ip = req.socket.remoteAddress;
   try {
     if (url === '/' || url === '/index.html') {
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY' });
-      return fs.createReadStream(path.join(__dirname, 'index.html')).pipe(res);
+      page = page || buildPage();
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY });
+      return res.end(req.method === 'HEAD' ? undefined : page);
     }
     if (url === '/api/content' && req.method === 'GET') return send(res, 200, { content: read('content.json', null) });
     if (url === '/api/login' && req.method === 'POST') {
@@ -54,7 +81,12 @@ http.createServer(async (req, res) => {
     }
     if (url.startsWith('/api/')) {
       if (!authed(req)) return send(res, 401, { error: 'Entre no portal novamente.' });
-      if (url === '/api/content' && req.method === 'PUT') { const { content } = await body(req); if (!content || typeof content !== 'object') return send(res, 400, { error: 'Conteúdo inválido.' }); write('content.json', content); return send(res, 200, { ok: true }); }
+      if (url === '/api/content' && req.method === 'PUT') {
+        const { content } = await body(req);
+        if (!content || typeof content !== 'object') return send(res, 400, { error: 'Conteúdo inválido.' });
+        write('content.json', content); page = null;
+        return send(res, 200, { ok: true });
+      }
       if (url === '/api/leads' && req.method === 'GET') return send(res, 200, { leads: read('leads.json', []) });
       if (url.startsWith('/api/leads/') && req.method === 'DELETE') { const id = decodeURIComponent(url.slice(11)); write('leads.json', read('leads.json', []).filter(l => l.id !== id)); return send(res, 200, { ok: true }); }
       if (url === '/api/password' && req.method === 'POST') {
@@ -63,7 +95,15 @@ http.createServer(async (req, res) => {
         if (typeof neu !== 'string' || neu.length < 8) return send(res, 400, { error: 'A nova senha precisa de pelo menos 8 caracteres.' });
         auth = hash(neu); write('auth.json', auth); return send(res, 200, { ok: true });
       }
+      return send(res, 404, { error: 'Não encontrado.' });
     }
+    if ((req.method === 'GET' || req.method === 'HEAD') && sendStatic(req, res, url)) return;
     send(res, 404, { error: 'Não encontrado.' });
   } catch (e) { send(res, 400, { error: e.message }); }
-}).listen(PORT, () => console.log('Site no ar: http://localhost:' + PORT + '  ·  portal: http://localhost:' + PORT + '/#portal'));
+}
+
+(async () => {
+  try { ({ renderPage } = await import('./dist-server/ssr.js')); fs.accessSync(path.join(DIST, 'template.html')); }
+  catch { console.error('Build não encontrado. Rode "npm run build" antes de iniciar o servidor.'); process.exit(1); }
+  http.createServer(handle).listen(PORT, () => console.log('Site no ar: http://localhost:' + PORT + '  ·  portal: http://localhost:' + PORT + '/#portal'));
+})();

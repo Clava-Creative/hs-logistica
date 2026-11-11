@@ -1,0 +1,7 @@
+.faq{max-width:840px;border-top:2px solid var(--ink)}
+.qa{border-bottom:1px solid var(--line);position:relative}
+.qa summary{list-style:none;cursor:pointer;padding:24px 56px 24px 0;position:relative}
+.qa summary::-webkit-details-marker{display:none}
+.qa summary::after{content:"";position:absolute;right:12px;top:50%;width:12px;height:12px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:translateY(-70%) rotate(45deg);transition:transform .3s var(--ease)}
+.qa[open] summary::after{transform:translateY(-30%) rotate(225deg)}
+.qa p{color:var(--muted);padding:0 56px 26px 0;max-width:68ch}
