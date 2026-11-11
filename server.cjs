@@ -1,6 +1,6 @@
 // Servidor do site HS Logística: entrega o build (dist/) e guarda o que o cliente altera no portal.
 // Sem dependências. Uso: npm run build && ADMIN_PASSWORD="sua-senha" node server.cjs
-const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto');
+const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), zlib = require('zlib');
 
 const PORT = process.env.PORT || 3000;
 const DIST = path.join(__dirname, 'dist');
@@ -35,15 +35,25 @@ const str = (v, max) => String(v ?? '').slice(0, max).trim();
 // ---------- Página: o HTML sai com o conteúdo salvo já escrito e o mesmo conteúdo embutido para o JS ----------
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.json': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain; charset=utf-8', '.xml': 'application/xml' };
 const SECURITY = { 'X-Content-Type-Options': 'nosniff', 'X-Frame-Options': 'DENY', 'Referrer-Policy': 'strict-origin-when-cross-origin' };
-let renderPage = null, page = null, pageBuild = 0;   // page: HTML pronto, refeito quando o conteúdo ou o build mudam
+let renderPage = null, page = null, pageBuild = 0, pageId = '';   // page: HTML pronto, refeito quando o conteúdo ou o build mudam
 const inline = v => JSON.stringify(v).replace(/</g, '\\u003c').replace(/[\u2028\u2029]/g, c => '\\u' + c.charCodeAt(0).toString(16));
 function buildPage() {
   const template = fs.readFileSync(path.join(DIST, 'template.html'), 'utf8');
   const saved = read('content.json', null);
-  const { html } = renderPage(saved);
-  return template.replace('<!--app-->', () => html).replace('<!--head-->', '')
+  const { html, head } = renderPage(saved, process.env.SITE_URL || '');
+  return template.replace('<!--app-->', () => html).replace('<!--head-->', () => head)
     .replace('<!--state-->', () => `<script>window.__HS__=${inline({ content: saved })}</script>`);
 }
+// Texto sai comprimido (brotli ou gzip, o que o navegador aceitar); o resultado fica guardado em memória.
+const packed = new Map();
+function pack(req, key, buf) {
+  const ae = String(req.headers['accept-encoding'] || ''), enc = /\bbr\b/.test(ae) ? 'br' : /\bgzip\b/.test(ae) ? 'gzip' : '';
+  if (!enc) return { buf, enc };
+  const id = enc + ':' + key;
+  if (!packed.has(id)) packed.set(id, enc === 'br' ? zlib.brotliCompressSync(buf) : zlib.gzipSync(buf));
+  return { buf: packed.get(id), enc };
+}
+const TEXT = new Set(['.html', '.js', '.css', '.svg', '.json', '.txt', '.xml']);
 function sendStatic(req, res, url) {
   const rel = path.normalize(decodeURIComponent(url)).replace(/^([/\\]|\.\.[/\\])+/, '');
   const full = path.join(DIST, rel);
@@ -51,7 +61,14 @@ function sendStatic(req, res, url) {
   let st; try { st = fs.statSync(full); } catch { return false; }
   if (!st.isFile()) return false;
   const immutable = rel.startsWith('assets' + path.sep);
-  res.writeHead(200, { 'Content-Type': TYPES[path.extname(full)] || 'application/octet-stream', 'Content-Length': st.size, 'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=3600', ...SECURITY });
+  const head = { 'Content-Type': TYPES[path.extname(full)] || 'application/octet-stream', 'Cache-Control': immutable ? 'public, max-age=31536000, immutable' : 'public, max-age=3600', ...SECURITY };
+  if (TEXT.has(path.extname(full))) {
+    const { buf, enc } = pack(req, full + st.mtimeMs, fs.readFileSync(full));
+    res.writeHead(200, { ...head, 'Content-Length': buf.length, Vary: 'Accept-Encoding', ...(enc ? { 'Content-Encoding': enc } : {}) });
+    res.end(req.method === 'HEAD' ? undefined : buf);
+    return true;
+  }
+  res.writeHead(200, { ...head, 'Content-Length': st.size });
   if (req.method === 'HEAD') { res.end(); return true; }
   fs.createReadStream(full).pipe(res);
   return true;
@@ -62,9 +79,10 @@ async function handle(req, res) {
   try {
     if (url === '/' || url === '/index.html') {
       const built = fs.statSync(path.join(DIST, 'template.html')).mtimeMs;
-      if (!page || built !== pageBuild) { page = buildPage(); pageBuild = built; }
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', ...SECURITY });
-      return res.end(req.method === 'HEAD' ? undefined : page);
+      if (!page || built !== pageBuild) { page = buildPage(); pageBuild = built; pageId = crypto.randomUUID(); }
+      const { buf, enc } = pack(req, 'page' + pageId, Buffer.from(page));
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-cache', Vary: 'Accept-Encoding', ...(enc ? { 'Content-Encoding': enc } : {}), ...SECURITY });
+      return res.end(req.method === 'HEAD' ? undefined : buf);
     }
     if (url === '/api/content' && req.method === 'GET') return send(res, 200, { content: read('content.json', null) });
     if (url === '/api/login' && req.method === 'POST') {
@@ -85,7 +103,7 @@ async function handle(req, res) {
       if (url === '/api/content' && req.method === 'PUT') {
         const { content } = await body(req);
         if (!content || typeof content !== 'object') return send(res, 400, { error: 'Conteúdo inválido.' });
-        write('content.json', content); page = null;
+        write('content.json', content); page = null; for (const k of packed.keys()) if (k.includes(':page')) packed.delete(k);
         return send(res, 200, { ok: true });
       }
       if (url === '/api/leads' && req.method === 'GET') return send(res, 200, { leads: read('leads.json', []) });

@@ -18,14 +18,20 @@ import { createLabels } from './labels';
 const LIVE = new Set(['inicio', 'localizacao', 'etapas', 'contato']);
 const ORDER = ['inicio', 'servicos', 'localizacao', 'etapas', 'empresa', 'duvidas', 'contato'];
 
-export function mount(q: Quality): () => void {
+/** Devolve a vez ao navegador entre as etapas da montagem, para nenhuma delas virar uma tarefa longa. */
+const breathe = (): Promise<void> => new Promise((r) => setTimeout(r));
+
+export async function mount(q: Quality): Promise<() => void> {
   const budget = BUDGET[q.tier], still = reducedMotion();
   const canvas = document.createElement('canvas');
   canvas.className = 'scene'; canvas.setAttribute('aria-hidden', 'true');
   const renderer = createRenderer(canvas, q.tier);
   const { scene, camera, mats } = createScene(q.tier);
+  await breathe();
   const route = buildRoute(mats, budget.flow);
+  await breathe();
   const house = buildWarehouse(mats, budget.shadows);
+  await breathe();
   const cargo = buildCargo(mats, budget);
   const truck = buildTruck(mats, budget.shadows);
   scene.add(route.group, house.group, cargo.group, truck.group);
@@ -96,6 +102,10 @@ export function mount(q: Quality): () => void {
   canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); loop.setPaused(true); document.documentElement.classList.remove('has-3d'); canvas.classList.remove('is-ready'); });
   canvas.addEventListener('webglcontextrestored', () => { document.documentElement.classList.add('has-3d'); canvas.classList.add('is-ready'); loop.setPaused(false); });
 
+  // os shaders compilam em paralelo quando o navegador permite, em vez de travar no primeiro quadro
+  renderer.setSize(innerWidth, innerHeight, false);
+  await breathe();
+  try { await renderer.compileAsync(scene, camera); } catch { /* compila no primeiro quadro */ }
   resize();
   loop.live = LIVE.has(story.sec) && !still && !S.admin;
   loop.setPaused(S.admin || document.hidden);

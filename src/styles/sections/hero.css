@@ -27,7 +27,7 @@
 @media(prefers-reduced-motion:no-preference){
   body:not(.entered) .hero h1>span{animation:line 1s var(--ease) backwards}
   body:not(.entered) .hero h1>span+span{animation-delay:.12s}
-  body:not(.entered) .hero .sub{animation:rise .9s var(--ease) .22s backwards}
+  body:not(.entered) .hero .sub{animation:lift .9s var(--ease) .1s backwards}
   body:not(.entered) .hero .cta{animation:rise .9s var(--ease) .3s backwards}
   body:not(.entered) .fact>b{animation:rise .8s var(--ease) .66s backwards}
   body:not(.entered) .fact>b:nth-child(1){animation-delay:.42s}
@@ -35,4 +35,6 @@
   body:not(.entered) .fact>b:nth-child(3){animation-delay:.58s}
 }
 @keyframes line{from{clip-path:inset(0 0 100% 0);transform:translateY(.35em)}to{clip-path:inset(-.1em 0 -.2em 0);transform:none}}
+/* o parágrafo é o maior bloco de texto da primeira tela: entra sem ficar invisível, para pintar de imediato */
+@keyframes lift{from{transform:translateY(16px)}to{transform:none}}
 @keyframes rise{from{transform:translateY(22px);opacity:0}to{transform:none;opacity:1}}

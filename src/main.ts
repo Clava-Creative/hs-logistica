@@ -62,7 +62,7 @@ function schedule3D(): void {
   const q = detect();
   if (!q.webgl) { if (!reducedMotion()) fallback2D(); return; }
   if (!q.allow) return;                               // economia de dados: fica só o pôster
-  const go = (): void => { void import('./three').then((m) => m.mount(q)).catch(fallback2D); };
+  const go = (): void => { void import('./three').then((m) => m.mount(q)).catch(fallback2D); };   // falhou ao montar: fica o 2D
   if (q.tier === 'baixo') {
     // aparelho modesto: a cena só é baixada quando o visitante começa a usar a página
     const evs = ['pointerdown', 'touchstart', 'keydown', 'wheel', 'scroll'] as const;

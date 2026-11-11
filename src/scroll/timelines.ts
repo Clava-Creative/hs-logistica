@@ -63,15 +63,20 @@ function buildReveals(): void {
   if (facts.length) gsap.from(facts, { y: 18, opacity: 0, duration: .7, ease: EASE, stagger: .07, scrollTrigger: { trigger: '.facts', start: 'top 85%', once: true } });
 }
 
+let gen = 0;                                  // cada montagem invalida a anterior que ainda esteja em andamento
+const breathe = (): Promise<void> => new Promise((r) => setTimeout(r));
+
 function teardown(): void {
+  gen++;
   ScrollTrigger.getAll().forEach((t) => t.kill());
   gsap.killTweensOf('main *');
   gsap.set('main section h2, .facts > div', { clearProps: 'all' });
   document.querySelectorAll('.is-pinned').forEach((e) => e.classList.remove('is-pinned'));
 }
 
-function build(): void {
+async function build(): Promise<void> {
   teardown();
+  const mine = gen;
   story.p = {}; story.svc = 0; story.step = 0;
   if (S.admin) { stopLenis(); emitStory(); return; }   // editando: página parada, sem pins nem scroll suave
   startLenis();
@@ -81,7 +86,8 @@ function build(): void {
     document.querySelectorAll<HTMLElement>('.km-fill').forEach((e) => { e.style.transform = 'scaleX(1)'; });
     document.querySelectorAll('.km span').forEach((e) => e.classList.add('passed'));
   } else {
-    SECTIONS.forEach((s) => track(s.id));
+    // uma seção por vez, devolvendo a vez ao navegador entre elas: nenhuma tarefa longa trava a página
+    for (const s of SECTIONS) { track(s.id); await breathe(); if (mine !== gen) return; }
     buildReveals();
   }
   buildProgress();
@@ -92,7 +98,7 @@ function build(): void {
 
 export function initScroll(): void {
   onBeforeRender(teardown);
-  onRender(build);
+  onRender(() => void build());
   onSection((id) => { story.sec = id; emitStory(); });
   // âncoras passam pelo mesmo scroll, com desconto da barra do topo
   document.addEventListener('click', (e) => {
@@ -105,5 +111,5 @@ export function initScroll(): void {
   });
   void document.fonts?.ready.then(() => ScrollTrigger.refresh());
   let w = innerWidth;
-  addEventListener('resize', () => { if (innerWidth !== w) { w = innerWidth; build(); } });
+  addEventListener('resize', () => { if (innerWidth !== w) { w = innerWidth; void build(); } });
 }
