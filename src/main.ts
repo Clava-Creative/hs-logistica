@@ -17,10 +17,12 @@ import './styles/sections/about.css';
 import './styles/sections/faq.css';
 import './styles/sections/contact.css';
 import './styles/sections/footer.css';
+import './styles/scroll.css';
 import { S, load } from './content/store';
 import { render, onRender } from './app';
 import { initForms } from './forms';
 import { startMap } from './sections/map2d';
+import { initScroll } from './scroll/timelines';
 
 const admin = () => import('./admin/portal');
 
@@ -28,6 +30,7 @@ async function boot(): Promise<void> {
   await load();
   onRender(startMap);
   initForms();
+  initScroll();
   // O portal é um pedaço separado: só baixa quando alguém clica em "Portal" ou já tem sessão aberta.
   document.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest('[data-act="portal"]');
