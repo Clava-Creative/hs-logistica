@@ -19,8 +19,9 @@ export function startHomePreview(p: PreviewState): void {
   subscribe<Record<string, unknown>>({
     serverURL, depth: 1, initialData: (home || {}) as Record<string, unknown>, requestHandler: previewRequest(p.token),
     callback: (doc) => {
-      if (doc.globalType === 'site-settings') settings = doc as unknown as SiteSetting;
-      else if (doc.globalType === 'home') home = doc as unknown as Home;
+      // a resposta não diz de qual global é: reconhece-se pelo formato
+      if ('brand' in doc) settings = doc as unknown as SiteSetting;
+      else if ('hero' in doc) home = doc as unknown as Home;
       else return;
       S.C = fromCms(home, settings, S.C.latest, serverURL);
       render();
